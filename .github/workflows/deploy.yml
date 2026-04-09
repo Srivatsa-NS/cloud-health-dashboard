@@ -62,7 +62,7 @@ jobs :
                         container['image'] = '${{ steps.build-frontend.outputs.image }}'
                     if container['name'] == 'backend':
                         container['image'] = '${{ steps.build-backend.outputs.image }}'
-                allowed_keys = ['family','networkMode','requiresCompatibilities','cpu','memory','executionRoleArn','containerDefinitions']
+                allowed_keys = ['family','networkMode','requiresCompatibilities','cpu','memory','executionRoleArn','containerDefinitions', 'taskRoleArn']
                 filtered_definition = {key: task_definition[key] for key in allowed_keys if key in task_definition}
                 print(json.dumps(filtered_definition))
                 ")
