@@ -4,15 +4,17 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from flask import Flask, jsonify
 from flask_cors import CORS
 import boto3
-from dotenv import load_dotenv
 import os
 
-load_dotenv()
+# Load .env file only in local development (not in Fargate)
+if os.path.exists(".env"):
+    from dotenv import load_dotenv
+    load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-AWS_REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+AWS_REGION = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
 
 @app.route("/api/health")
 def health():
