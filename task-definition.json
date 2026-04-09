@@ -7,7 +7,7 @@
     "cpu": "512",
     "memory": "1024",
     "executionRoleArn": "arn:aws:iam::023778695755:role/ecsTaskExecutionRole",
-    "taskRoleArn" : "arn:aws:iam::023778695755:role/cloudHealthTaskRole",
+    "taskRoleArn": "arn:aws:iam::023778695755:role/cloudHealthTaskRole",
     "containerDefinitions": [
         {
             "name": "frontend",
@@ -18,7 +18,16 @@
                     "protocol": "tcp"
                 }
             ],
-            "essential": true
+            "essential": true,
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/cloud-health-dashboard",
+                    "awslogs-region": "us-east-1",
+                    "awslogs-stream-prefix": "frontend",
+                    "awslogs-create-group": "true"
+                }
+            }
         },
         {
             "name": "backend",
@@ -35,7 +44,16 @@
                     "name": "AWS_DEFAULT_REGION",
                     "value": "us-east-1"
                 }
-            ]
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/cloud-health-dashboard",
+                    "awslogs-region": "us-east-1",
+                    "awslogs-stream-prefix": "backend",
+                    "awslogs-create-group": "true"
+                }
+            }
         }
     ]
 }
