@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
-const API_BASE = "http://localhost:5000"
+const API_BASE = ""
 
 export default function App() {
   const [ecsClusters, setEcsClusters] = useState([])
