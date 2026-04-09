@@ -23,9 +23,9 @@ def get_rcs_tasks():
     client = boto3.client(
         "ecs",
         region_name=AWS_REGION,
-        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        verify=False
+        # aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        # aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        # verify=False
     )
     
     clusters_response = client.list_clusters()
@@ -52,9 +52,9 @@ def get_cpu_metrics():
     client = boto3.client(
         "cloudwatch",
         region_name=AWS_REGION,
-        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        verify=False
+        # aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        # aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        # verify=False
     )
     
     from datetime import datetime, timedelta
@@ -98,9 +98,9 @@ def get_memory_metrics():
     client = boto3.client(
         "cloudwatch",
         region_name=AWS_REGION,
-        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        verify=False
+        # aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        # aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        # verify=False
     )
     
     from datetime import datetime, timedelta
