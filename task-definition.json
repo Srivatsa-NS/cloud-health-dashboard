@@ -1,0 +1,40 @@
+{
+    "family": "cloud-health-dashboard",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "512",
+    "memory": "1024",
+    "executionRoleArn": "arn:aws:iam::023778695755:role/ecsTaskExecutionRole",
+    "containerDefinitions": [
+        {
+            "name": "frontend",
+            "image": "023778695755.dkr.ecr.us-east-1.amazonaws.com/cloud-health-frontend:latest",
+            "portMappings": [
+                {
+                    "containerPort": 80,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true
+        },
+        {
+            "name": "backend",
+            "image": "023778695755.dkr.ecr.us-east-1.amazonaws.com/cloud-health-backend:latest",
+            "portMappings": [
+                {
+                    "containerPort": 5000,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "AWS_DEFAULT_REGION",
+                    "value": "us-east-1"
+                }
+            ]
+        }
+    ]
+}

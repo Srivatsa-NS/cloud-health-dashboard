@@ -1,0 +1,86 @@
+name: Deploy to AWS Fargate
+
+on:
+    push:
+        branches:
+            - main
+
+env :
+    AWS_REGION : us-east-1
+    ECS_CLUSTER : cloud-health-cluster
+    TASK_DEFINITION : cloud-health-dashboard
+    FRONTEND_ECR_REPOSITORY : cloud-health-frontend
+    BACKEND_ECR_REPOSITORY : cloud-health-backend
+
+jobs :
+    deploy:
+        runs-on: ubuntu-latest
+        steps : 
+            - name : Checkout code
+              uses : actions/checkout@v3
+
+            - name : Configure AWS Credentials
+              uses : aws-actions/configure-aws-credentials@v2
+              with :
+                aws-access-key-id : ${{ secrets.AWS_ACCESS_KEY_ID}} 
+                aws-secret-access-key : ${{ secrets.AWS_SECRET_ACCESS_KEY}} 
+                aws-region : ${{ secrets.AWS_REGION}}
+
+            - name : Login to Amazon ECR
+              id : login-ecr
+              uses : aws-actions/amazon-ecr-login@v1
+
+            - name : Build and push backend image
+              id : build-backend
+              env :
+                ECR_REGISTRY : ${{ steps.login-ecr.outputs.registry }}
+                IMAGE_TAG : ${{ github.sha }}
+              run : |
+                docker build -t $ECR_REGISTRY/$BACKEND_ECR_REPOSITORY:$IMAGE_TAG ./backend
+                docker push $ECR_REGISTRY/$BACKEND_ECR_REPOSITORY:$IMAGE_TAG
+                echo "image=$ECR_REGISTRY/$BACKEND_ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+            - name : Build and push frontend image
+              id : build-frontend
+              env :
+                ECR_REGISTRY : ${{ steps.login-ecr.outputs.registry }}
+                IMAGE_TAG : ${{ github.sha }}
+              run : |
+                docker build -t $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG ./frontend
+                docker push $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG
+                echo "image=$ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+            - name: Update task definition
+              id: task-def
+              run: |
+                TASK_DEF=$(aws ecs describe-task-definition --task-definition $TASK_DEFINITION --query "taskDefinition")
+                NEW_TASK_DEF=$(echo $TASK_DEF | python3 -c "
+                import json, sys
+                task_definition = json.load(sys.stdin)
+                for container in task_definition['containerDefinitions']:
+                    if container['name'] == 'frontend':
+                        container['image'] = '${{ steps.build-frontend.outputs.image }}'
+                    if container['name'] == 'backend':
+                        container['image'] = '${{ steps.build-backend.outputs.image }}'
+                allowed_keys = ['family','networkMode','requiresCompatibilities','cpu','memory','executionRoleArn','containerDefinitions']
+                filtered_definition = {key: task_definition[key] for key in allowed_keys if key in task_definition}
+                print(json.dumps(filtered_definition))
+                ")
+                NEW_ARN=$(aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEF" --query "taskDefinition.taskDefinitionArn" --output text)
+                echo "task_def_arn=$NEW_ARN" >> $GITHUB_OUTPUT
+
+            - name : Stop existing Fargate tasks
+              run : |
+                RUNNING_TASK=$(aws ecs list-tasks --cluster $ECS_CLUSTER --query "taskArns" --output text)
+                for TASK_ARN in $RUNNING_TASKS; do
+                  aws ecs stop-task --cluster $ECS_CLUSTER --task $TASK_ARN
+                done
+
+            - name: Run new Fargate task
+              run: |
+                aws ecs run-task \
+                  --cluster $ECS_CLUSTER \
+                  --task-definition ${{ steps.task-def.outputs.task_def_arn }} \
+                  --launch-type FARGATE \
+                  --network-configuration "awsvpcConfiguration={subnets=[subnet-035ce7cd0ce1fd84e],securityGroups=[sg-0651f604ad0907f45],assignPublicIp=ENABLED}" \
+                  --region $AWS_REGION
