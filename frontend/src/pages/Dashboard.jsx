@@ -4,6 +4,7 @@ import axios from "axios"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import PageGrid from "@/components/PageGrid"
 
 const serviceCards = [
     { title: "EC2 Instances", path: "/ec2", api: "/api/ec2", icon: "🖥️", countKey: "length", description: "Virtual machines" },
@@ -77,11 +78,11 @@ export default function Dashboard() {
                     Last refreshed: {lastRefreshed.toLocaleTimeString()}
                 </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <PageGrid>
                 {serviceCards.map((card) => (
                     <ServiceCard key={card.path} card={card} />
                 ))}
-            </div>
+            </PageGrid>
         </div>
     )
 }

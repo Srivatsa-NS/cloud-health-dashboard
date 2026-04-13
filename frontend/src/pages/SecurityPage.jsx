@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction }
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import InsightCard from "@/components/InsightCard"
+import PageGrid from "@/components/PageGrid"
+import FlipCard from "@/components/FlipCard"
 
 export default function SecurityPage() {
     const [groups, setGroups] = useState([])
@@ -58,42 +60,67 @@ export default function SecurityPage() {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            <PageGrid className="mb-8">
                 {groups.length === 0 ? (
                     <p className="text-muted-foreground col-span-3">No security groups found.</p>
                 ) : (
                     groups.map((sg) => (
-                        <Card key={sg.group_id}>
-                            <CardHeader>
-                                <CardTitle>{sg.name}</CardTitle>
-                                <CardDescription>{sg.group_id} — {sg.description}</CardDescription>
-                                <CardAction>
-                                    {sg.risky_rules.length > 0 ? (
-                                        <Badge variant="destructive">{sg.risky_rules.length} Risk(s)</Badge>
-                                    ) : (
-                                        <Badge variant="default">Clean</Badge>
-                                    )}
-                                </CardAction>
-                            </CardHeader>
-                            {sg.risky_rules.length > 0 && (
-                                <CardContent className="flex flex-col gap-2">
-                                    <p className="text-muted-foreground text-xs">Risky Rules</p>
-                                    <div className="flex flex-col gap-2">
-                                        {sg.risky_rules.map((rule, i) => (
-                                            <div key={i} className="flex items-center justify-between text-xs px-3 py-2 rounded-lg border border-border bg-muted/50">
-                                                <span>Port {rule.port} ({rule.protocol}) → {rule.cidr}</span>
-                                                <Badge variant={rule.risk === "critical" ? "destructive" : "secondary"}>
-                                                    {rule.risk}
-                                                </Badge>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                            )}
-                        </Card>
+                        <FlipCard
+                            key={sg.group_id}
+                            front={
+                                <Card className="h-full cursor-pointer select-none flex flex-col">
+                                    <CardHeader>
+                                        <CardTitle>{sg.name}</CardTitle>
+                                        <CardDescription>{sg.group_id} — {sg.description}</CardDescription>
+                                        <CardAction>
+                                            {sg.risky_rules.length > 0 ? (
+                                                <Badge variant="destructive">{sg.risky_rules.length} Risk(s)</Badge>
+                                            ) : (
+                                                <Badge variant="default">Clean</Badge>
+                                            )}
+                                        </CardAction>
+                                    </CardHeader>
+                                    <CardContent className="mt-auto">
+                                        <p className="text-muted-foreground text-xs">
+                                            {sg.risky_rules.length > 0
+                                                ? `${sg.risky_rules.length} risky rule(s) detected — click to view`
+                                                : "No risky rules detected"}
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            }
+                            back={
+                                <Card className="h-full cursor-pointer select-none flex flex-col overflow-hidden">
+                                    <CardHeader>
+                                        <CardTitle className="text-sm">Risky Rules</CardTitle>
+                                        <CardDescription>{sg.name}</CardDescription>
+                                        <CardAction>
+                                            <Badge variant={sg.risky_rules.length > 0 ? "destructive" : "default"}>
+                                                {sg.risky_rules.length} rule(s)
+                                            </Badge>
+                                        </CardAction>
+                                    </CardHeader>
+                                    <CardContent className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-2">
+                                        {sg.risky_rules.length > 0 ? (
+                                            sg.risky_rules.map((rule, i) => (
+                                                <div key={i} className="flex items-center justify-between text-xs px-3 py-2 rounded-lg border border-border bg-muted/50 shrink-0">
+                                                    <span>Port {rule.port} ({rule.protocol}) → {rule.cidr}</span>
+                                                    <Badge variant={rule.risk === "critical" ? "destructive" : "secondary"}>
+                                                        {rule.risk}
+                                                    </Badge>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-muted-foreground text-xs">No risky rules.</p>
+                                        )}
+                                        <p className="text-muted-foreground text-xs mt-auto pt-2 shrink-0">Click to go back</p>
+                                    </CardContent>
+                                </Card>
+                            }
+                        />
                     ))
                 )}
-            </div>
+            </PageGrid>
 
             <div className="mt-8">
                 <div className="flex items-center justify-between mb-4">

@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction }
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import InsightCard from "@/components/InsightCard"
+import PageGrid from "@/components/PageGrid"
+import FlipCard from "@/components/FlipCard"
 
 export default function S3Page() {
     const [buckets, setBuckets] = useState([])
@@ -58,25 +60,54 @@ export default function S3Page() {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            <PageGrid className="mb-8">
                 {buckets.length === 0 ? (
                     <p className="text-muted-foreground col-span-3">No S3 buckets found.</p>
                 ) : (
                     buckets.map((bucket) => (
-                        <Card key={bucket.name}>
-                            <CardHeader>
-                                <CardTitle>{bucket.name}</CardTitle>
-                                <CardDescription>Created: {bucket.created}</CardDescription>
-                                <CardAction>
-                                    <Badge variant={bucket.is_public ? "destructive" : "default"}>
-                                        {bucket.is_public ? "Public" : "Private"}
-                                    </Badge>
-                                </CardAction>
-                            </CardHeader>
-                        </Card>
+                        <FlipCard
+                            key={bucket.name}
+                            front={
+                                <Card className="h-full cursor-pointer select-none flex flex-col">
+                                    <CardHeader>
+                                        <CardTitle>{bucket.name}</CardTitle>
+                                        <CardDescription>Created: {bucket.created}</CardDescription>
+                                        <CardAction>
+                                            <Badge variant={bucket.is_public ? "destructive" : "default"}>
+                                                {bucket.is_public ? "Public" : "Private"}
+                                            </Badge>
+                                        </CardAction>
+                                    </CardHeader>
+                                    <CardContent className="mt-auto">
+                                        <p className="text-muted-foreground text-xs">Click to see access details</p>
+                                    </CardContent>
+                                </Card>
+                            }
+                            back={
+                                <Card className="h-full cursor-pointer select-none flex flex-col overflow-hidden">
+                                    <CardHeader>
+                                        <CardTitle className="text-sm">{bucket.name}</CardTitle>
+                                        <CardDescription>Access Details</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-2">
+                                        <div>
+                                            <p className="text-muted-foreground text-xs">Public Access</p>
+                                            <Badge variant={bucket.is_public ? "destructive" : "default"} className="mt-1">
+                                                {bucket.is_public ? "Public — anyone can access this bucket" : "Private — access restricted"}
+                                            </Badge>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground text-xs">Created</p>
+                                            <p className="text-sm">{bucket.created}</p>
+                                        </div>
+                                        <p className="text-muted-foreground text-xs mt-auto pt-2 shrink-0">Click to go back</p>
+                                    </CardContent>
+                                </Card>
+                            }
+                        />
                     ))
                 )}
-            </div>
+            </PageGrid>
 
             <div className="mt-8">
                 <div className="flex items-center justify-between mb-4">

@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction }
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import InsightCard from "@/components/InsightCard"
+import PageGrid from "@/components/PageGrid"
+import FlipCard from "@/components/FlipCard"
 
 const stateVariant = {
     running: "default",
@@ -63,63 +65,84 @@ export default function EC2Page() {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            <PageGrid className="mb-8">
                 {instances.length === 0 ? (
                     <p className="text-muted-foreground col-span-3">No EC2 instances found in this region.</p>
                 ) : (
                     instances.map((instance) => (
-                        <Card key={instance.instance_id}>
-                            <CardHeader>
-                                <CardTitle>{instance.name || instance.instance_id}</CardTitle>
-                                <CardDescription>{instance.instance_id}</CardDescription>
-                                <CardAction>
-                                    <Badge variant={stateVariant[instance.state] || "secondary"}>
-                                        {instance.state}
-                                    </Badge>
-                                </CardAction>
-                            </CardHeader>
-                            <CardContent className="flex flex-col gap-3">
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <p className="text-muted-foreground text-xs">Type</p>
-                                        <p className="text-sm font-medium">{instance.instance_type}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-muted-foreground text-xs">Availability Zone</p>
-                                        <p className="text-sm font-medium">{instance.availability_zone}</p>
-                                    </div>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground text-xs mb-1">CPU Utilization</p>
-                                    <p className={`text-2xl font-bold ${instance.cpu_utilization > 80 ? "text-red-400" : instance.cpu_utilization > 60 ? "text-yellow-400" : "text-green-400"}`}>
-                                        {instance.cpu_utilization}%
-                                    </p>
-                                </div>
-                                <div className="flex gap-4">
-                                    <div>
-                                        <p className="text-muted-foreground text-xs mb-1">System</p>
-                                        <Badge variant={instance.system_status === "ok" ? "default" : "destructive"}>
-                                            {instance.system_status}
-                                        </Badge>
-                                    </div>
-                                    <div>
-                                        <p className="text-muted-foreground text-xs mb-1">Instance</p>
-                                        <Badge variant={instance.instance_status === "ok" ? "default" : "destructive"}>
-                                            {instance.instance_status}
-                                        </Badge>
-                                    </div>
-                                </div>
-                                {instance.security_groups.length > 0 && (
-                                    <div>
-                                        <p className="text-muted-foreground text-xs mb-1">Security Groups</p>
-                                        <p className="text-xs text-muted-foreground">{instance.security_groups.join(", ")}</p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                        <FlipCard
+                            key={instance.instance_id}
+                            front={
+                                <Card className="h-full cursor-pointer select-none flex flex-col">
+                                    <CardHeader>
+                                        <CardTitle>{instance.name || instance.instance_id}</CardTitle>
+                                        <CardDescription>{instance.instance_id}</CardDescription>
+                                        <CardAction>
+                                            <Badge variant={stateVariant[instance.state] || "secondary"}>
+                                                {instance.state}
+                                            </Badge>
+                                        </CardAction>
+                                    </CardHeader>
+                                    <CardContent className="flex flex-col gap-3 mt-auto">
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <p className="text-muted-foreground text-xs">Type</p>
+                                                <p className="text-sm font-medium">{instance.instance_type}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-muted-foreground text-xs">Availability Zone</p>
+                                                <p className="text-sm font-medium">{instance.availability_zone}</p>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground text-xs mb-1">CPU Utilization</p>
+                                            <p className={`text-2xl font-bold ${instance.cpu_utilization > 80 ? "text-red-400" : instance.cpu_utilization > 60 ? "text-yellow-400" : "text-green-400"}`}>
+                                                {instance.cpu_utilization}%
+                                            </p>
+                                        </div>
+                                        <p className="text-muted-foreground text-xs">Click to see status checks & security groups</p>
+                                    </CardContent>
+                                </Card>
+                            }
+                            back={
+                                <Card className="h-full cursor-pointer select-none flex flex-col overflow-hidden">
+                                    <CardHeader>
+                                        <CardTitle className="text-sm">{instance.name || instance.instance_id}</CardTitle>
+                                        <CardDescription>Status &amp; Security Details</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-3">
+                                        <div className="flex gap-4">
+                                            <div>
+                                                <p className="text-muted-foreground text-xs mb-1">System Status</p>
+                                                <Badge variant={instance.system_status === "ok" ? "default" : "destructive"}>
+                                                    {instance.system_status}
+                                                </Badge>
+                                            </div>
+                                            <div>
+                                                <p className="text-muted-foreground text-xs mb-1">Instance Status</p>
+                                                <Badge variant={instance.instance_status === "ok" ? "default" : "destructive"}>
+                                                    {instance.instance_status}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground text-xs mb-1">Security Groups</p>
+                                            {instance.security_groups.length > 0 ? (
+                                                instance.security_groups.map((sg, i) => (
+                                                    <p key={i} className="text-xs text-muted-foreground">{sg}</p>
+                                                ))
+                                            ) : (
+                                                <p className="text-xs text-muted-foreground">None</p>
+                                            )}
+                                        </div>
+                                        <p className="text-muted-foreground text-xs mt-auto pt-2 shrink-0">Click to go back</p>
+                                    </CardContent>
+                                </Card>
+                            }
+                        />
                     ))
                 )}
-            </div>
+            </PageGrid>
 
             <div className="mt-8">
                 <div className="flex items-center justify-between mb-4">

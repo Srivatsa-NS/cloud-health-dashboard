@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction }
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import InsightCard from "@/components/InsightCard"
+import PageGrid from "@/components/PageGrid"
+import FlipCard from "@/components/FlipCard"
 
 export default function ECSPage() {
     const [clusters, setClusters] = useState([])
@@ -56,41 +58,55 @@ export default function ECSPage() {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            <PageGrid className="mb-8">
                 {clusters.length === 0 ? (
                     <p className="text-muted-foreground col-span-3">No ECS clusters found.</p>
                 ) : (
                     clusters.map((cluster) => (
-                        <Card key={cluster.cluster}>
-                            <CardHeader>
-                                <CardTitle>{cluster.cluster}</CardTitle>
-                                <CardDescription>{cluster.task_arns.length} task(s) registered</CardDescription>
-                                <CardAction>
-                                    <Badge variant={cluster.running_tasks > 0 ? "default" : "secondary"}>
-                                        {cluster.running_tasks > 0 ? "Active" : "Idle"}
-                                    </Badge>
-                                </CardAction>
-                            </CardHeader>
-                            <CardContent className="flex flex-col gap-3">
-                                <div>
-                                    <p className="text-muted-foreground text-xs mb-1">Running Tasks</p>
-                                    <p className="text-3xl font-bold">{cluster.running_tasks}</p>
-                                </div>
-                                {cluster.task_arns.length > 0 && (
-                                    <div>
-                                        <p className="text-muted-foreground text-xs mb-2">Task ARNs</p>
-                                        <div className="flex flex-col gap-1">
-                                            {cluster.task_arns.map((arn) => (
-                                                <p key={arn} className="text-xs text-muted-foreground truncate">{arn.split("/").pop()}</p>
-                                            ))}
+                        <FlipCard
+                            key={cluster.cluster}
+                            front={
+                                <Card className="h-full cursor-pointer select-none flex flex-col">
+                                    <CardHeader>
+                                        <CardTitle>{cluster.cluster}</CardTitle>
+                                        <CardDescription>{cluster.task_arns.length} task(s) registered</CardDescription>
+                                        <CardAction>
+                                            <Badge variant={cluster.running_tasks > 0 ? "default" : "secondary"}>
+                                                {cluster.running_tasks > 0 ? "Active" : "Idle"}
+                                            </Badge>
+                                        </CardAction>
+                                    </CardHeader>
+                                    <CardContent className="flex flex-col gap-2 mt-auto">
+                                        <div>
+                                            <p className="text-muted-foreground text-xs mb-1">Running Tasks</p>
+                                            <p className="text-3xl font-bold">{cluster.running_tasks}</p>
                                         </div>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                                        <p className="text-muted-foreground text-xs">Click to see task ARNs</p>
+                                    </CardContent>
+                                </Card>
+                            }
+                            back={
+                                <Card className="h-full cursor-pointer select-none flex flex-col overflow-hidden">
+                                    <CardHeader>
+                                        <CardTitle className="text-sm">{cluster.cluster}</CardTitle>
+                                        <CardDescription>Task ARNs</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-1">
+                                        {cluster.task_arns.length > 0 ? (
+                                            cluster.task_arns.map((arn) => (
+                                                <p key={arn} className="text-xs text-muted-foreground break-all">{arn.split("/").pop()}</p>
+                                            ))
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground">No tasks running</p>
+                                        )}
+                                        <p className="text-muted-foreground text-xs mt-auto pt-2 shrink-0">Click to go back</p>
+                                    </CardContent>
+                                </Card>
+                            }
+                        />
                     ))
                 )}
-            </div>
+            </PageGrid>
 
             <div className="mt-8">
                 <div className="flex items-center justify-between mb-4">

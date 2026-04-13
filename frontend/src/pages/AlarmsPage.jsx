@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction }
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import InsightCard from "@/components/InsightCard"
+import PageGrid from "@/components/PageGrid"
+import FlipCard from "@/components/FlipCard"
 
 const stateVariant = {
     ALARM: "destructive",
@@ -64,39 +66,61 @@ export default function AlarmsPage() {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            <PageGrid className="mb-8">
                 {alarms.length === 0 ? (
                     <p className="text-muted-foreground col-span-3">No CloudWatch alarms found.</p>
                 ) : (
                     alarms.map((alarm) => (
-                        <Card key={alarm.name}>
-                            <CardHeader>
-                                <CardTitle>{alarm.name}</CardTitle>
-                                <CardDescription>{alarm.description || "No description"}</CardDescription>
-                                <CardAction>
-                                    <Badge variant={stateVariant[alarm.state] || "secondary"}>
-                                        {alarm.state}
-                                    </Badge>
-                                </CardAction>
-                            </CardHeader>
-                            <CardContent className="flex flex-col gap-2">
-                                <div>
-                                    <p className="text-muted-foreground text-xs">Namespace / Metric</p>
-                                    <p className="text-sm font-medium">{alarm.namespace} / {alarm.metric}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground text-xs">Threshold</p>
-                                    <p className="text-sm font-medium">{alarm.threshold}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground text-xs">Last Updated</p>
-                                    <p className="text-xs text-muted-foreground">{alarm.updated}</p>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <FlipCard
+                            key={alarm.name}
+                            front={
+                                <Card className="h-full cursor-pointer select-none flex flex-col">
+                                    <CardHeader>
+                                        <CardTitle>{alarm.name}</CardTitle>
+                                        <CardDescription>{alarm.description || "No description"}</CardDescription>
+                                        <CardAction>
+                                            <Badge variant={stateVariant[alarm.state] || "secondary"}>
+                                                {alarm.state}
+                                            </Badge>
+                                        </CardAction>
+                                    </CardHeader>
+                                    <CardContent className="mt-auto">
+                                        <p className="text-muted-foreground text-xs">Click to see metric details</p>
+                                    </CardContent>
+                                </Card>
+                            }
+                            back={
+                                <Card className="h-full cursor-pointer select-none flex flex-col overflow-hidden">
+                                    <CardHeader>
+                                        <CardTitle className="text-sm">{alarm.name}</CardTitle>
+                                        <CardDescription>Metric Details</CardDescription>
+                                        <CardAction>
+                                            <Badge variant={stateVariant[alarm.state] || "secondary"}>
+                                                {alarm.state}
+                                            </Badge>
+                                        </CardAction>
+                                    </CardHeader>
+                                    <CardContent className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-2">
+                                        <div>
+                                            <p className="text-muted-foreground text-xs">Namespace / Metric</p>
+                                            <p className="text-sm font-medium">{alarm.namespace} / {alarm.metric}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground text-xs">Threshold</p>
+                                            <p className="text-sm font-medium">{alarm.threshold}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground text-xs">Last Updated</p>
+                                            <p className="text-xs text-muted-foreground">{alarm.updated}</p>
+                                        </div>
+                                        <p className="text-muted-foreground text-xs mt-auto pt-2 shrink-0">Click to go back</p>
+                                    </CardContent>
+                                </Card>
+                            }
+                        />
                     ))
                 )}
-            </div>
+            </PageGrid>
 
             <div className="mt-8">
                 <div className="flex items-center justify-between mb-4">
