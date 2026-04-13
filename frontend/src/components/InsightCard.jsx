@@ -1,13 +1,8 @@
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import axios from "axios"
-
-const severityColors = {
-    critical: "bg-red-500/10 border-red-500/30 text-red-400",
-    warning: "bg-yellow-500/10 border-yellow-500/30 text-yellow-400",
-    info: "bg-blue-500/10 border-blue-500/30 text-blue-400",
-}
 
 const severityBadge = {
     critical: "destructive",
@@ -36,33 +31,36 @@ export default function InsightCard({ insight, onActionComplete }) {
     }
 
     return (
-        <div className={`rounded-lg border p-4 ${severityColors[insight.severity]}`}>
-            <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                        <Badge variant={severityBadge[insight.severity]}>
-                            {insight.severity.toUpperCase()}
-                        </Badge>
-                        <span className="font-semibold text-white">{insight.title}</span>
-                    </div>
-                    <p className="text-sm text-gray-300 mb-1">{insight.description}</p>
-                    <p className="text-sm text-gray-400 italic">Suggested: {insight.action}</p>
+        <Card>
+            <CardHeader>
+                <div className="flex items-center gap-2">
+                    <Badge variant={severityBadge[insight.severity]}>
+                        {insight.severity.toUpperCase()}
+                    </Badge>
+                    <span className="font-semibold text-sm">{insight.title}</span>
                 </div>
                 {insight.action_type !== "none" && (
-                    <button
-                        onClick={handleFixIt}
-                        disabled={loading || result?.success}
-                        className="shrink-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-sm rounded-md transition-colors"
-                    >
-                        {loading ? "Running..." : result?.success ? "Done ✓" : "Fix It"}
-                    </button>
+                    <CardAction>
+                        <Button
+                            size="sm"
+                            onClick={handleFixIt}
+                            disabled={loading || result?.success}
+                            variant={result?.success ? "secondary" : "default"}
+                        >
+                            {loading ? "Running..." : result?.success ? "Done ✓" : "Fix It"}
+                        </Button>
+                    </CardAction>
                 )}
-            </div>
-            {result && (
-                <p className={`mt-2 text-sm ${result.success ? "text-green-400" : "text-red-400"}`}>
-                    {result.message}
-                </p>
-            )}
-        </div>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-1">
+                <p className="text-sm text-muted-foreground">{insight.description}</p>
+                <p className="text-sm text-muted-foreground italic">Suggested: {insight.action}</p>
+                {result && (
+                    <p className={`text-sm mt-1 ${result.success ? "text-green-500" : "text-destructive"}`}>
+                        {result.message}
+                    </p>
+                )}
+            </CardContent>
+        </Card>
     )
 }
