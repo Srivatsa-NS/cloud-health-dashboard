@@ -38,8 +38,14 @@ export default function CloudWatchPage() {
 
     if (loading) return <div className="text-muted-foreground p-8">Loading log groups...</div>
 
-    const criticalCount = groups.filter((g) => g.health === "critical").length
-    const warningCount = groups.filter((g) => g.health === "warning").length
+    const sorted = [...groups].sort((a, b) =>
+        b.error_count !== a.error_count
+            ? b.error_count - a.error_count
+            : b.warning_count - a.warning_count
+    )
+
+    const criticalCount = sorted.filter((g) => g.health === "critical").length
+    const warningCount = sorted.filter((g) => g.health === "warning").length
 
     return (
         <div>
@@ -47,7 +53,7 @@ export default function CloudWatchPage() {
                 <div>
                     <h1 className="text-3xl font-bold">CloudWatch Logs</h1>
                     <p className="text-muted-foreground mt-1">
-                        {groups.length} log group(s)
+                        {sorted.length} log group(s)
                         {criticalCount > 0 && <span className="text-red-500 ml-2">· {criticalCount} critical</span>}
                         {warningCount > 0 && <span className="text-yellow-500 ml-2">· {warningCount} warning</span>}
                     </p>
@@ -58,10 +64,10 @@ export default function CloudWatchPage() {
             </div>
 
             <PageGrid className="mb-8">
-                {groups.length === 0 ? (
+                {sorted.length === 0 ? (
                     <p className="text-muted-foreground col-span-3">No log groups found.</p>
                 ) : (
-                    groups.map((group) => {
+                    sorted.map((group) => {
                         const cfg = healthConfig[group.health] || healthConfig.healthy
                         return (
                             <Card

@@ -573,18 +573,38 @@ Respond with a JSON array of insights. Each insight must have:
 Only respond with the JSON array, no other text."""
 
     bedrock_client = boto_client("bedrock-runtime")
+
+    # For cloudwatch, only send errors/warnings (max 20) to stay within token limits
+    if service == "cloudwatch" and isinstance(payload, list):
+        payload = [e for e in payload if e.get("level") in ("ERROR", "WARN")][:20]
+
     response = bedrock_client.invoke_model(
         modelId="meta.llama3-8b-instruct-v1:0",
         body=json.dumps(
             {
                 "prompt": f"<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
-                "max_gen_len": 1024,
+                "max_gen_len": 2048,
                 "temperature": 0.1,
             }
         ),
     )
     response_body = json.loads(response["body"].read())
-    insights = json.loads(response_body["generation"])
+    raw = response_body["generation"].strip()
+
+    # Strip markdown code fences if the model wrapped the JSON
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        raw = raw.strip()
+
+    # Find the JSON array boundaries in case of any preamble text
+    start = raw.find("[")
+    end = raw.rfind("]")
+    if start != -1 and end != -1:
+        raw = raw[start:end + 1]
+
+    insights = json.loads(raw)
     return jsonify(insights)
 
 
