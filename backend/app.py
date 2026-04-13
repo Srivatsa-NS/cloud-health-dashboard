@@ -22,6 +22,10 @@ CORS(app)
 
 AWS_REGION = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
 
+# In-memory insights cache: {hash -> {"insights": [...], "cached_at": float}}
+_insights_cache = {}
+INSIGHTS_CACHE_TTL = 300  # seconds (5 minutes)
+
 
 def boto_client(service):
     return boto3.client(service, region_name=AWS_REGION, verify=VERIFY_SSL)
@@ -541,10 +545,27 @@ def get_log_events():
 @app.route("/api/insights", methods=["POST"])
 def get_insights():
     import json
+    import hashlib
+    import time
 
     data = request.get_json()
     service = data.get("service")
     payload = data.get("data")
+
+    # For cloudwatch, trim to errors/warnings (max 20) before hashing
+    if service == "cloudwatch" and isinstance(payload, list):
+        payload = [e for e in payload if e.get("level") in ("ERROR", "WARN")][:20]
+
+    # Build cache key from service + stable payload representation
+    cache_key = hashlib.sha256(
+        f"{service}:{json.dumps(payload, sort_keys=True)}".encode()
+    ).hexdigest()
+
+    now = time.time()
+    cached = _insights_cache.get(cache_key)
+    if cached and (now - cached["cached_at"]) < INSIGHTS_CACHE_TTL:
+        return jsonify(cached["insights"])
+
 
     service_prompts = {
         "ec2": "EC2 instances. Possible action_types: reboot_instance, stop_instance, start_instance, revoke_sg_rule, none",
@@ -574,10 +595,6 @@ Only respond with the JSON array, no other text."""
 
     bedrock_client = boto_client("bedrock-runtime")
 
-    # For cloudwatch, only send errors/warnings (max 20) to stay within token limits
-    if service == "cloudwatch" and isinstance(payload, list):
-        payload = [e for e in payload if e.get("level") in ("ERROR", "WARN")][:20]
-
     response = bedrock_client.invoke_model(
         modelId="meta.llama3-8b-instruct-v1:0",
         body=json.dumps(
@@ -605,6 +622,7 @@ Only respond with the JSON array, no other text."""
         raw = raw[start:end + 1]
 
     insights = json.loads(raw)
+    _insights_cache[cache_key] = {"insights": insights, "cached_at": now}
     return jsonify(insights)
 
 
