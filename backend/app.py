@@ -429,26 +429,18 @@ def get_log_groups():
         warning_count = 0
 
         try:
-            error_resp = client.filter_log_events(
+            events_resp = client.filter_log_events(
                 logGroupName=group_name,
                 startTime=now_ms - one_hour_ms,
                 endTime=now_ms,
-                filterPattern='"ERROR"',
-                limit=100,
+                limit=500,
             )
-            error_count = len(error_resp.get("events", []))
-        except Exception:
-            pass
-
-        try:
-            warn_resp = client.filter_log_events(
-                logGroupName=group_name,
-                startTime=now_ms - one_hour_ms,
-                endTime=now_ms,
-                filterPattern='"WARN"',
-                limit=100,
-            )
-            warning_count = len(warn_resp.get("events", []))
+            for event in events_resp.get("events", []):
+                upper = event.get("message", "").upper()
+                if any(kw in upper for kw in ("ERROR", "EXCEPTION", "FATAL", "CRITICAL")):
+                    error_count += 1
+                elif "WARN" in upper:
+                    warning_count += 1
         except Exception:
             pass
 
