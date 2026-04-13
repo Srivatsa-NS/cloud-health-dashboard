@@ -9,7 +9,7 @@ import SecurityPage from "@/pages/SecurityPage"
 import S3Page from "@/pages/S3Page"
 
 export default function App() {
-  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark")
+  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light")
 
   useEffect(() => {
     const root = document.documentElement
