@@ -31,7 +31,7 @@ export default function InsightCard({ insight, onActionComplete }) {
     }
 
     return (
-        <Card>
+        <Card className="overflow-visible">
             <CardHeader>
                 <div className="flex items-center gap-2">
                     <Badge variant={severityBadge[insight.severity]}>

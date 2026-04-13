@@ -19,7 +19,7 @@ export default function InsightsDrawer() {
             />
 
             {/* Drawer */}
-            <div className={`fixed top-0 right-0 z-50 h-full w-full sm:w-96 bg-background border-l border-border flex flex-col transition-transform duration-300 ease-in-out ${drawerOpen ? "translate-x-0" : "translate-x-full"}`}>
+            <div className={`fixed top-0 right-0 z-50 h-screen w-full sm:w-96 bg-background border-l border-border flex flex-col transition-transform duration-300 ease-in-out ${drawerOpen ? "translate-x-0" : "translate-x-full"}`}>
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
@@ -41,7 +41,7 @@ export default function InsightsDrawer() {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-3">
+                <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
                     {loading && (
                         <>
                             {[1, 2, 3].map((i) => (
