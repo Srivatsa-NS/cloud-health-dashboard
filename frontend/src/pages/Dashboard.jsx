@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import axios from "axios"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 
 const serviceCards = [
     { title: "EC2 Instances", path: "/ec2", api: "/api/ec2", icon: "🖥️", countKey: "length", description: "Virtual machines" },
@@ -36,20 +37,20 @@ function ServiceCard({ card }) {
     return (
         <Card
             onClick={() => navigate(card.path)}
-            className="bg-gray-900 border-gray-700 cursor-pointer hover:border-blue-500 transition-colors"
+            className="cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
         >
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-white text-base">{card.title}</CardTitle>
-                <span className="text-2xl">{card.icon}</span>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <span className="text-xl">{card.icon}</span>
+                    {card.title}
+                </CardTitle>
+                <CardDescription>{card.description}</CardDescription>
+                <CardAction>
+                    {alert && <Badge variant="destructive">Alert</Badge>}
+                </CardAction>
             </CardHeader>
             <CardContent>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-3xl font-bold text-white">{count ?? "..."}</p>
-                        <p className="text-gray-400 text-sm">{card.description}</p>
-                    </div>
-                    {alert && <Badge variant="destructive">Alert</Badge>}
-                </div>
+                <p className="text-4xl font-bold">{count ?? "..."}</p>
             </CardContent>
         </Card>
     )
@@ -69,14 +70,14 @@ export default function Dashboard() {
         <div>
             <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-                    <p className="text-gray-400 mt-1">AWS Infrastructure Health Overview</p>
+                    <h1 className="text-3xl font-bold">Dashboard</h1>
+                    <p className="text-muted-foreground mt-1">AWS Infrastructure Health Overview</p>
                 </div>
-                <p className="text-gray-500 text-sm">
+                <p className="text-muted-foreground text-sm">
                     Last refreshed: {lastRefreshed.toLocaleTimeString()}
                 </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {serviceCards.map((card) => (
                     <ServiceCard key={card.path} card={card} />
                 ))}

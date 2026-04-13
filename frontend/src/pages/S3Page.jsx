@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
 import axios from "axios"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import InsightCard from "@/components/InsightCard"
 
 export default function S3Page() {
@@ -38,7 +39,7 @@ export default function S3Page() {
 
     useEffect(() => { fetchBuckets() }, [])
 
-    if (loading) return <div className="text-white">Loading S3 buckets...</div>
+    if (loading) return <div className="text-muted-foreground p-8">Loading S3 buckets...</div>
 
     const publicCount = buckets.filter((b) => b.is_public).length
 
@@ -46,53 +47,46 @@ export default function S3Page() {
         <div>
             <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-white">S3 Buckets</h1>
-                    <p className="text-gray-400 mt-1">
+                    <h1 className="text-3xl font-bold">S3 Buckets</h1>
+                    <p className="text-muted-foreground mt-1">
                         {buckets.length} total —
                         <span className="text-red-400"> {publicCount} public</span>
                     </p>
                 </div>
-                <button onClick={fetchBuckets} disabled={refreshing} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-600 text-white text-sm rounded-md">
+                <Button variant="outline" size="sm" onClick={fetchBuckets} disabled={refreshing}>
                     {refreshing ? "Refreshing..." : "Refresh"}
-                </button>
+                </Button>
             </div>
 
-            <div className="flex flex-col gap-3 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
                 {buckets.length === 0 ? (
-                    <p className="text-gray-400">No S3 buckets found.</p>
+                    <p className="text-muted-foreground col-span-3">No S3 buckets found.</p>
                 ) : (
                     buckets.map((bucket) => (
-                        <Card key={bucket.name} className={`border ${bucket.is_public ? "bg-red-500/5 border-red-500/30" : "bg-gray-900 border-gray-700"}`}>
-                            <CardContent className="pt-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-white font-medium">{bucket.name}</p>
-                                        <p className="text-gray-500 text-xs">Created: {bucket.created}</p>
-                                    </div>
+                        <Card key={bucket.name}>
+                            <CardHeader>
+                                <CardTitle>{bucket.name}</CardTitle>
+                                <CardDescription>Created: {bucket.created}</CardDescription>
+                                <CardAction>
                                     <Badge variant={bucket.is_public ? "destructive" : "default"}>
                                         {bucket.is_public ? "Public" : "Private"}
                                     </Badge>
-                                </div>
-                            </CardContent>
+                                </CardAction>
+                            </CardHeader>
                         </Card>
                     ))
                 )}
             </div>
 
-            {/* AI Insights */}
             <div className="mt-8">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold text-white">CloudPulse AI Insights</h2>
-                    <button
-                        onClick={fetchInsights}
-                        disabled={insightsLoading || buckets.length === 0}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-sm rounded-md"
-                    >
+                    <h2 className="text-xl font-semibold">CloudPulse AI Insights</h2>
+                    <Button size="sm" onClick={fetchInsights} disabled={insightsLoading || buckets.length === 0}>
                         {insightsLoading ? "Analyzing..." : "Analyze with AI"}
-                    </button>
+                    </Button>
                 </div>
                 {insights.length === 0 && !insightsLoading && (
-                    <p className="text-gray-500">Click "Analyze with AI" to get insights about your S3 buckets.</p>
+                    <p className="text-muted-foreground">Click "Analyze with AI" to get insights about your S3 buckets.</p>
                 )}
                 <div className="flex flex-col gap-3">
                     {insights.map((insight, index) => (

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
 import axios from "axios"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import InsightCard from "@/components/InsightCard"
 
 export default function ECSPage() {
@@ -41,67 +42,65 @@ export default function ECSPage() {
 
     useEffect(() => { fetchClusters() }, [])
 
-    if (loading) return <div className="text-white">Loading ECS clusters...</div>
+    if (loading) return <div className="text-muted-foreground p-8">Loading ECS clusters...</div>
 
     return (
         <div>
             <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-white">ECS Clusters</h1>
-                    <p className="text-gray-400 mt-1">{clusters.length} cluster(s) found</p>
+                    <h1 className="text-3xl font-bold">ECS Clusters</h1>
+                    <p className="text-muted-foreground mt-1">{clusters.length} cluster(s) found</p>
                 </div>
-                <button
-                    onClick={fetchClusters}
-                    disabled={refreshing}
-                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-600 text-white text-sm rounded-md"
-                >
+                <Button variant="outline" size="sm" onClick={fetchClusters} disabled={refreshing}>
                     {refreshing ? "Refreshing..." : "Refresh"}
-                </button>
+                </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                {clusters.map((cluster) => (
-                    <Card key={cluster.cluster} className="bg-gray-900 border-gray-700">
-                        <CardHeader>
-                            <CardTitle className="text-white">{cluster.cluster}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex items-center justify-between">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                {clusters.length === 0 ? (
+                    <p className="text-muted-foreground col-span-3">No ECS clusters found.</p>
+                ) : (
+                    clusters.map((cluster) => (
+                        <Card key={cluster.cluster}>
+                            <CardHeader>
+                                <CardTitle>{cluster.cluster}</CardTitle>
+                                <CardDescription>{cluster.task_arns.length} task(s) registered</CardDescription>
+                                <CardAction>
+                                    <Badge variant={cluster.running_tasks > 0 ? "default" : "secondary"}>
+                                        {cluster.running_tasks > 0 ? "Active" : "Idle"}
+                                    </Badge>
+                                </CardAction>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-3">
                                 <div>
-                                    <p className="text-gray-400 text-sm">Running Tasks</p>
-                                    <p className="text-3xl font-bold text-white">{cluster.running_tasks}</p>
+                                    <p className="text-muted-foreground text-xs mb-1">Running Tasks</p>
+                                    <p className="text-3xl font-bold">{cluster.running_tasks}</p>
                                 </div>
-                                <Badge variant={cluster.running_tasks > 0 ? "default" : "secondary"}>
-                                    {cluster.running_tasks > 0 ? "Active" : "Idle"}
-                                </Badge>
-                            </div>
-                            {cluster.task_arns.length > 0 && (
-                                <div className="mt-4">
-                                    <p className="text-gray-400 text-xs mb-2">Task ARNs</p>
-                                    {cluster.task_arns.map((arn) => (
-                                        <p key={arn} className="text-gray-500 text-xs truncate">{arn}</p>
-                                    ))}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                ))}
+                                {cluster.task_arns.length > 0 && (
+                                    <div>
+                                        <p className="text-muted-foreground text-xs mb-2">Task ARNs</p>
+                                        <div className="flex flex-col gap-1">
+                                            {cluster.task_arns.map((arn) => (
+                                                <p key={arn} className="text-xs text-muted-foreground truncate">{arn.split("/").pop()}</p>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
             </div>
 
-            {/* AI Insights */}
             <div className="mt-8">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold text-white">CloudPulse AI Insights</h2>
-                    <button
-                        onClick={fetchInsights}
-                        disabled={insightsLoading || clusters.length === 0}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-sm rounded-md"
-                    >
+                    <h2 className="text-xl font-semibold">CloudPulse AI Insights</h2>
+                    <Button size="sm" onClick={fetchInsights} disabled={insightsLoading || clusters.length === 0}>
                         {insightsLoading ? "Analyzing..." : "Analyze with AI"}
-                    </button>
+                    </Button>
                 </div>
                 {insights.length === 0 && !insightsLoading && (
-                    <p className="text-gray-500">Click "Analyze with AI" to get insights about your ECS clusters.</p>
+                    <p className="text-muted-foreground">Click "Analyze with AI" to get insights about your ECS clusters.</p>
                 )}
                 <div className="flex flex-col gap-3">
                     {insights.map((insight, index) => (
