@@ -8,15 +8,23 @@ import boto3
 import os
 
 # Load .env file only in local development (not in Fargate)
-if os.path.exists(".env"):
+IS_LOCAL = os.path.exists(".env")
+if IS_LOCAL:
     from dotenv import load_dotenv
 
     load_dotenv()
+
+# Disable SSL verification locally (corporate proxy), enable in production
+VERIFY_SSL = not IS_LOCAL
 
 app = Flask(__name__)
 CORS(app)
 
 AWS_REGION = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
+
+
+def boto_client(service):
+    return boto3.client(service, region_name=AWS_REGION, verify=VERIFY_SSL)
 
 
 @app.route("/api/health")
@@ -26,13 +34,7 @@ def health():
 
 @app.route("/api/ecs")
 def get_rcs_tasks():
-    client = boto3.client(
-        "ecs",
-        region_name=AWS_REGION,
-        # aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-        # aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        # verify=False
-    )
+    client = boto_client("ecs")
 
     clusters_response = client.list_clusters()
     clusters = clusters_response["clusterArns"]
@@ -58,13 +60,7 @@ def get_rcs_tasks():
 
 @app.route("/api/cloudwatch/cpu")
 def get_cpu_metrics():
-    client = boto3.client(
-        "cloudwatch",
-        region_name=AWS_REGION,
-        # aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-        # aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        # verify=False
-    )
+    client = boto_client("cloudwatch")
 
     from datetime import datetime, timedelta
 
@@ -100,13 +96,7 @@ def get_cpu_metrics():
 
 @app.route("/api/cloudwatch/memory")
 def get_memory_metrics():
-    client = boto3.client(
-        "cloudwatch",
-        region_name=AWS_REGION,
-        # aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-        # aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        # verify=False
-    )
+    client = boto_client("cloudwatch")
 
     from datetime import datetime, timedelta
 
@@ -143,8 +133,8 @@ def get_memory_metrics():
 
 @app.route("/api/ec2")
 def get_ec2_instances():
-    client = boto3.client("ec2", region_name=AWS_REGION)
-    cloudwatch_client = boto3.client("cloudwatch", region_name=AWS_REGION)
+    client = boto_client("ec2")
+    cloudwatch_client = boto_client("cloudwatch")
 
     from datetime import datetime, timedelta
 
@@ -216,8 +206,8 @@ def execute_action():
     action_type = data.get("action_type")
     params = data.get("action_params", {})
 
-    ec2_client = boto3.client("ec2", region_name=AWS_REGION)
-    s3_client = boto3.client("s3", region_name=AWS_REGION)
+    ec2_client = boto_client("ec2")
+    s3_client = boto_client("s3")
 
     try:
         if action_type == "reboot_instance":
@@ -318,7 +308,7 @@ def execute_action():
 
 @app.route("/api/alarms")
 def get_cloudwatch_alarms():
-    client = boto3.client("cloudwatch", region_name=AWS_REGION)
+    client = boto_client("cloudwatch")
     response = client.describe_alarms()
 
     result = []
@@ -341,7 +331,7 @@ def get_cloudwatch_alarms():
 
 @app.route("/api/security")
 def get_security_groups():
-    client = boto3.client("ec2", region_name=AWS_REGION)
+    client = boto_client("ec2")
     response = client.describe_security_groups()
 
     result = []
@@ -378,7 +368,7 @@ def get_security_groups():
 
 @app.route("/api/s3")
 def get_s3_buckets():
-    s3_client = boto3.client("s3", region_name=AWS_REGION)
+    s3_client = boto_client("s3")
     response = s3_client.list_buckets()
 
     result = []
@@ -444,7 +434,7 @@ Respond with a JSON array of insights. Each insight must have:
 
 Only respond with the JSON array, no other text."""
 
-    bedrock_client = boto3.client("bedrock-runtime", region_name=AWS_REGION)
+    bedrock_client = boto_client("bedrock-runtime")
     response = bedrock_client.invoke_model(
         modelId="meta.llama3-8b-instruct-v1:0",
         body=json.dumps(

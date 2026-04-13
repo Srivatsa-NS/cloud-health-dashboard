@@ -3,17 +3,16 @@ import axios from "axios"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import InsightCard from "@/components/InsightCard"
 import PageGrid from "@/components/PageGrid"
 import FlipCard from "@/components/FlipCard"
+import { useInsights } from "@/context/InsightsContext"
 
 export default function S3Page() {
     const [buckets, setBuckets] = useState([])
-    const [insights, setInsights] = useState([])
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
     const [refreshKey, setRefreshKey] = useState(0)
-    const [insightsLoading, setInsightsLoading] = useState(false)
+    const { registerPage } = useInsights()
 
     const fetchBuckets = async () => {
         setRefreshing(true)
@@ -29,19 +28,8 @@ export default function S3Page() {
         }
     }
 
-    const fetchInsights = async () => {
-        setInsightsLoading(true)
-        try {
-            const res = await axios.post("/api/insights", { service: "s3", data: buckets })
-            setInsights(res.data)
-        } catch (err) {
-            console.error(err)
-        } finally {
-            setInsightsLoading(false)
-        }
-    }
-
     useEffect(() => { fetchBuckets() }, [])
+    useEffect(() => { registerPage("s3", buckets, fetchBuckets) }, [buckets])
 
     if (loading) return <div className="text-muted-foreground p-8">Loading S3 buckets...</div>
 
@@ -111,22 +99,6 @@ export default function S3Page() {
                 )}
             </PageGrid>
 
-            <div className="mt-8">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold">CloudPulse AI Insights</h2>
-                    <Button size="sm" onClick={fetchInsights} disabled={insightsLoading || buckets.length === 0}>
-                        {insightsLoading ? "Analyzing..." : "Analyze with AI"}
-                    </Button>
-                </div>
-                {insights.length === 0 && !insightsLoading && (
-                    <p className="text-muted-foreground">Click "Analyze with AI" to get insights about your S3 buckets.</p>
-                )}
-                <div className="flex flex-col gap-3">
-                    {insights.map((insight, index) => (
-                        <InsightCard key={index} insight={insight} onActionComplete={fetchBuckets} />
-                    ))}
-                </div>
-            </div>
         </div>
     )
 }

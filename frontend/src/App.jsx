@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { InsightsProvider } from "@/context/InsightsContext"
 import Navbar from "@/components/Navbar"
+import InsightsDrawer from "@/components/InsightsDrawer"
 import Dashboard from "@/pages/Dashboard"
 import EC2Page from "@/pages/EC2Page"
 import ECSPage from "@/pages/ECSPage"
@@ -25,19 +27,22 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-background text-foreground">
-        <Navbar theme={theme} toggleTheme={toggleTheme} />
-        <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/ec2" element={<EC2Page />} />
-            <Route path="/ecs" element={<ECSPage />} />
-            <Route path="/alarms" element={<AlarmsPage />} />
-            <Route path="/security" element={<SecurityPage />} />
-            <Route path="/s3" element={<S3Page />} />
-          </Routes>
-        </main>
-      </div>
+      <InsightsProvider>
+        <div className="min-h-screen bg-background text-foreground">
+          <Navbar theme={theme} toggleTheme={toggleTheme} />
+          <InsightsDrawer />
+          <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/ec2" element={<EC2Page />} />
+              <Route path="/ecs" element={<ECSPage />} />
+              <Route path="/alarms" element={<AlarmsPage />} />
+              <Route path="/security" element={<SecurityPage />} />
+              <Route path="/s3" element={<S3Page />} />
+            </Routes>
+          </main>
+        </div>
+      </InsightsProvider>
     </BrowserRouter>
   )
 }

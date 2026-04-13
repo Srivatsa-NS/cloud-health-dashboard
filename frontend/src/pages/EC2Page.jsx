@@ -3,9 +3,9 @@ import axios from "axios"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import InsightCard from "@/components/InsightCard"
 import PageGrid from "@/components/PageGrid"
 import FlipCard from "@/components/FlipCard"
+import { useInsights } from "@/context/InsightsContext"
 
 const stateVariant = {
     running: "default",
@@ -16,11 +16,10 @@ const stateVariant = {
 
 export default function EC2Page() {
     const [instances, setInstances] = useState([])
-    const [insights, setInsights] = useState([])
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
     const [refreshKey, setRefreshKey] = useState(0)
-    const [insightsLoading, setInsightsLoading] = useState(false)
+    const { registerPage } = useInsights()
 
     const fetchInstances = async () => {
         setRefreshing(true)
@@ -36,22 +35,8 @@ export default function EC2Page() {
         }
     }
 
-    const fetchInsights = async () => {
-        setInsightsLoading(true)
-        try {
-            const res = await axios.post("/api/insights", {
-                service: "ec2",
-                data: instances
-            })
-            setInsights(res.data)
-        } catch (err) {
-            console.error(err)
-        } finally {
-            setInsightsLoading(false)
-        }
-    }
-
     useEffect(() => { fetchInstances() }, [])
+    useEffect(() => { registerPage("ec2", instances, fetchInstances) }, [instances])
 
     if (loading) return <div className="text-muted-foreground p-8">Loading EC2 instances...</div>
 
@@ -145,23 +130,6 @@ export default function EC2Page() {
                     ))
                 )}
             </PageGrid>
-
-            <div className="mt-8">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold">CloudPulse AI Insights</h2>
-                    <Button size="sm" onClick={fetchInsights} disabled={insightsLoading || instances.length === 0}>
-                        {insightsLoading ? "Analyzing..." : "Analyze with AI"}
-                    </Button>
-                </div>
-                {insights.length === 0 && !insightsLoading && (
-                    <p className="text-muted-foreground">Click "Analyze with AI" to get insights about your EC2 instances.</p>
-                )}
-                <div className="flex flex-col gap-3">
-                    {insights.map((insight, index) => (
-                        <InsightCard key={index} insight={insight} onActionComplete={fetchInstances} />
-                    ))}
-                </div>
-            </div>
         </div>
     )
 }
