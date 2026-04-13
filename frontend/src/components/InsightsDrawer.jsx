@@ -1,8 +1,14 @@
+import { useEffect } from "react"
 import { useInsights } from "@/context/InsightsContext"
 import InsightCard from "@/components/InsightCard"
 
 export default function InsightsDrawer() {
     const { drawerOpen, closeDrawer, insights, loading, actionComplete } = useInsights()
+
+    useEffect(() => {
+        document.body.style.overflow = drawerOpen ? "hidden" : ""
+        return () => { document.body.style.overflow = "" }
+    }, [drawerOpen])
 
     return (
         <>
@@ -35,7 +41,7 @@ export default function InsightsDrawer() {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-3">
                     {loading && (
                         <>
                             {[1, 2, 3].map((i) => (
@@ -43,12 +49,19 @@ export default function InsightsDrawer() {
                             ))}
                         </>
                     )}
-                    {!loading && insights.length === 0 && (
-                        <p className="text-muted-foreground text-sm">No insights yet. Insights will appear here after analysis.</p>
-                    )}
-                    {!loading && insights.map((insight, index) => (
-                        <InsightCard key={index} insight={insight} onActionComplete={actionComplete} />
-                    ))}
+                    {!loading && (() => {
+                        const filtered = insights.filter((i) => i.severity !== "info")
+                        if (filtered.length === 0) return (
+                            <p className="text-muted-foreground text-sm">
+                                {insights.length > 0
+                                    ? "No risks or warnings found. Everything looks good."
+                                    : "No insights yet. Insights will appear here after analysis."}
+                            </p>
+                        )
+                        return filtered.map((insight, index) => (
+                            <InsightCard key={index} insight={insight} onActionComplete={actionComplete} />
+                        ))
+                    })()}
                 </div>
             </div>
         </>
