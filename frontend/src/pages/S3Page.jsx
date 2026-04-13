@@ -12,6 +12,7 @@ export default function S3Page() {
     const [insights, setInsights] = useState([])
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
+    const [refreshKey, setRefreshKey] = useState(0)
     const [insightsLoading, setInsightsLoading] = useState(false)
 
     const fetchBuckets = async () => {
@@ -19,6 +20,7 @@ export default function S3Page() {
         try {
             const res = await axios.get("/api/s3")
             setBuckets(res.data)
+            setRefreshKey((k) => k + 1)
         } catch (err) {
             console.error(err)
         } finally {
@@ -66,7 +68,7 @@ export default function S3Page() {
                 ) : (
                     buckets.map((bucket) => (
                         <FlipCard
-                            key={bucket.name}
+                            key={`${bucket.name}-${refreshKey}`}
                             front={
                                 <Card className="h-full cursor-pointer select-none flex flex-col">
                                     <CardHeader>

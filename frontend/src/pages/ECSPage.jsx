@@ -12,6 +12,7 @@ export default function ECSPage() {
     const [insights, setInsights] = useState([])
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
+    const [refreshKey, setRefreshKey] = useState(0)
     const [insightsLoading, setInsightsLoading] = useState(false)
 
     const fetchClusters = async () => {
@@ -19,6 +20,7 @@ export default function ECSPage() {
         try {
             const res = await axios.get("/api/ecs")
             setClusters(res.data)
+            setRefreshKey((k) => k + 1)
         } catch (err) {
             console.error(err)
         } finally {
@@ -64,7 +66,7 @@ export default function ECSPage() {
                 ) : (
                     clusters.map((cluster) => (
                         <FlipCard
-                            key={cluster.cluster}
+                            key={`${cluster.cluster}-${refreshKey}`}
                             front={
                                 <Card className="h-full cursor-pointer select-none flex flex-col">
                                     <CardHeader>

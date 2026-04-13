@@ -12,6 +12,7 @@ export default function SecurityPage() {
     const [insights, setInsights] = useState([])
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
+    const [refreshKey, setRefreshKey] = useState(0)
     const [insightsLoading, setInsightsLoading] = useState(false)
 
     const fetchGroups = async () => {
@@ -19,6 +20,7 @@ export default function SecurityPage() {
         try {
             const res = await axios.get("/api/security")
             setGroups(res.data)
+            setRefreshKey((k) => k + 1)
         } catch (err) {
             console.error(err)
         } finally {
@@ -66,7 +68,7 @@ export default function SecurityPage() {
                 ) : (
                     groups.map((sg) => (
                         <FlipCard
-                            key={sg.group_id}
+                            key={`${sg.group_id}-${refreshKey}`}
                             front={
                                 <Card className="h-full cursor-pointer select-none flex flex-col">
                                     <CardHeader>

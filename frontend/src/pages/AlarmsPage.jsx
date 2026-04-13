@@ -18,6 +18,7 @@ export default function AlarmsPage() {
     const [insights, setInsights] = useState([])
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
+    const [refreshKey, setRefreshKey] = useState(0)
     const [insightsLoading, setInsightsLoading] = useState(false)
 
     const fetchAlarms = async () => {
@@ -25,6 +26,7 @@ export default function AlarmsPage() {
         try {
             const res = await axios.get("/api/alarms")
             setAlarms(res.data)
+            setRefreshKey((k) => k + 1)
         } catch (err) {
             console.error(err)
         } finally {
@@ -72,7 +74,7 @@ export default function AlarmsPage() {
                 ) : (
                     alarms.map((alarm) => (
                         <FlipCard
-                            key={alarm.name}
+                            key={`${alarm.name}-${refreshKey}`}
                             front={
                                 <Card className="h-full cursor-pointer select-none flex flex-col">
                                     <CardHeader>

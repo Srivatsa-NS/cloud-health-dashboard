@@ -19,6 +19,7 @@ export default function EC2Page() {
     const [insights, setInsights] = useState([])
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
+    const [refreshKey, setRefreshKey] = useState(0)
     const [insightsLoading, setInsightsLoading] = useState(false)
 
     const fetchInstances = async () => {
@@ -26,6 +27,7 @@ export default function EC2Page() {
         try {
             const res = await axios.get("/api/ec2")
             setInstances(res.data)
+            setRefreshKey((k) => k + 1)
         } catch (err) {
             console.error(err)
         } finally {
@@ -71,7 +73,7 @@ export default function EC2Page() {
                 ) : (
                     instances.map((instance) => (
                         <FlipCard
-                            key={instance.instance_id}
+                            key={`${instance.instance_id}-${refreshKey}`}
                             front={
                                 <Card className="h-full cursor-pointer select-none flex flex-col">
                                     <CardHeader>
