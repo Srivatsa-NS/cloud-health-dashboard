@@ -503,6 +503,7 @@ def get_log_events():
     error_count = 0
     warning_count = 0
     result = []
+    pattern_counts = {}  # normalized message -> {count, level}
 
     for event in sorted(events, key=lambda e: e["timestamp"], reverse=True):
         message = event.get("message", "").strip()
@@ -523,6 +524,25 @@ def get_log_events():
             "level": level,
         })
 
+        # Build deduplicated pattern counts per level for priority-based AI payload
+        key = message[:120]
+        if key in pattern_counts:
+            pattern_counts[key]["count"] += 1
+        else:
+            pattern_counts[key] = {"message": message[:200], "level": level, "count": 1}
+
+    # Priority-based insights payload: errors first, then warnings, then info
+    # Limits: 15 errors + 10 warnings + 5 info = 30 max
+    LIMITS = {"ERROR": 15, "WARN": 10, "INFO": 5}
+    insights_payload = []
+    for level_name, limit in LIMITS.items():
+        bucket = sorted(
+            [p for p in pattern_counts.values() if p["level"] == level_name],
+            key=lambda x: x["count"],
+            reverse=True,
+        )[:limit]
+        insights_payload.extend(bucket)
+
     return jsonify({
         "group": group_name,
         "events": result,
@@ -531,6 +551,7 @@ def get_log_events():
         "warning_count": warning_count,
         "info_count": len(result) - error_count - warning_count,
         "hours": hours,
+        "top_errors": insights_payload,
     })
 
 
@@ -544,9 +565,7 @@ def get_insights():
     service = data.get("service")
     payload = data.get("data")
 
-    # For cloudwatch, trim to errors/warnings (max 20) before hashing
-    if service == "cloudwatch" and isinstance(payload, list):
-        payload = [e for e in payload if e.get("level") in ("ERROR", "WARN")][:20]
+    # For cloudwatch, payload is already top_errors (deduplicated, max 20) — no trimming needed
 
     # Build cache key from service + stable payload representation
     cache_key = hashlib.sha256(

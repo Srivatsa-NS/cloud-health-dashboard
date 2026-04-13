@@ -42,8 +42,8 @@ export default function LogDetailPage() {
     useEffect(() => { fetchEvents() }, [groupName])
 
     useEffect(() => {
-        if (data?.events) {
-            registerPage("cloudwatch", data.events.slice(0, 50), () => fetchEvents())
+        if (data?.top_errors !== undefined) {
+            registerPage("cloudwatch", data.top_errors, () => fetchEvents())
         }
     }, [data])
 
