@@ -117,6 +117,29 @@
     --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Smooth light/dark mode transition */
+html {
+    transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*, *::before, *::after {
+    transition-property: background-color, border-color, color, box-shadow, opacity;
+    transition-duration: 0.4s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-delay: 0.05s;
+}
+
+@keyframes theme-icon-spin {
+    0%   { transform: rotate(-180deg) scale(0.5); opacity: 0; }
+    60%  { transform: rotate(15deg)   scale(1.1); opacity: 1; }
+    80%  { transform: rotate(-8deg)   scale(0.95); }
+    100% { transform: rotate(0deg)    scale(1);   opacity: 1; }
+}
+
+.theme-icon-enter {
+    animation: theme-icon-spin 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

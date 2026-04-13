@@ -72,7 +72,9 @@ export default function Navbar({ theme, toggleTheme }) {
                             className="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                             aria-label="Toggle theme"
                         >
-                            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+                            <span key={theme} className="theme-icon-enter">
+                                {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+                            </span>
                         </button>
 
                         {/* Mobile hamburger */}
