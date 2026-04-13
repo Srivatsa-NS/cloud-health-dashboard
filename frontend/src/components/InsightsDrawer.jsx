@@ -1,14 +1,54 @@
-import { useEffect } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { useInsights } from "@/context/InsightsContext"
 import InsightCard from "@/components/InsightCard"
 
+const MIN_WIDTH = 320
+const MAX_WIDTH = 900
+const DEFAULT_WIDTH = 384
+
 export default function InsightsDrawer() {
     const { drawerOpen, closeDrawer, insights, loading, actionComplete } = useInsights()
+    const [width, setWidth] = useState(DEFAULT_WIDTH)
+    const dragging = useRef(false)
 
     useEffect(() => {
         document.body.style.overflow = drawerOpen ? "hidden" : ""
         return () => { document.body.style.overflow = "" }
     }, [drawerOpen])
+
+    // Reset width when drawer closes
+    useEffect(() => {
+        if (!drawerOpen) setWidth(DEFAULT_WIDTH)
+    }, [drawerOpen])
+
+    const onMouseDown = useCallback((e) => {
+        // Only on md+ (>=768px)
+        if (window.innerWidth < 768) return
+        dragging.current = true
+        document.body.style.cursor = "ew-resize"
+        document.body.style.userSelect = "none"
+    }, [])
+
+    const onMouseMove = useCallback((e) => {
+        if (!dragging.current) return
+        const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, window.innerWidth - e.clientX))
+        setWidth(newWidth)
+    }, [])
+
+    const onMouseUp = useCallback(() => {
+        dragging.current = false
+        document.body.style.cursor = ""
+        document.body.style.userSelect = ""
+    }, [])
+
+    useEffect(() => {
+        document.addEventListener("mousemove", onMouseMove)
+        document.addEventListener("mouseup", onMouseUp)
+        return () => {
+            document.removeEventListener("mousemove", onMouseMove)
+            document.removeEventListener("mouseup", onMouseUp)
+        }
+    }, [onMouseMove, onMouseUp])
 
     return (
         <>
@@ -19,7 +59,18 @@ export default function InsightsDrawer() {
             />
 
             {/* Drawer */}
-            <div className={`fixed top-0 right-0 z-50 h-screen w-full sm:w-96 bg-background border-l border-border flex flex-col transition-transform duration-300 ease-in-out ${drawerOpen ? "translate-x-0" : "translate-x-full"}`}>
+            <div
+                className={`fixed top-0 right-0 z-50 h-screen bg-background border-l border-border flex flex-col transition-transform duration-300 ease-in-out ${drawerOpen ? "translate-x-0" : "translate-x-full"}`}
+                style={{ width: window.innerWidth >= 768 ? `${width}px` : "100%" }}
+            >
+                {/* Drag handle — md+ only */}
+                <div
+                    onMouseDown={onMouseDown}
+                    className="hidden md:flex absolute left-0 top-0 h-full w-1.5 cursor-ew-resize group z-10 items-center justify-center"
+                    title="Drag to resize"
+                >
+                    <div className="h-10 w-1 rounded-full bg-border group-hover:bg-primary transition-colors duration-150" />
+                </div>
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
