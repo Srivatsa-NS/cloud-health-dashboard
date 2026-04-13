@@ -9,6 +9,8 @@ import ECSPage from "@/pages/ECSPage"
 import AlarmsPage from "@/pages/AlarmsPage"
 import SecurityPage from "@/pages/SecurityPage"
 import S3Page from "@/pages/S3Page"
+import CloudWatchPage from "@/pages/CloudWatchPage"
+import LogDetailPage from "@/pages/LogDetailPage"
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light")
@@ -39,6 +41,8 @@ export default function App() {
               <Route path="/alarms" element={<AlarmsPage />} />
               <Route path="/security" element={<SecurityPage />} />
               <Route path="/s3" element={<S3Page />} />
+              <Route path="/logs" element={<CloudWatchPage />} />
+              <Route path="/logs/:groupName" element={<LogDetailPage />} />
             </Routes>
           </main>
         </div>

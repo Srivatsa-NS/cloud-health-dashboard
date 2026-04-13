@@ -9,6 +9,7 @@ const navItems = [
     { path: "/alarms", label: "Alarms" },
     { path: "/security", label: "Security" },
     { path: "/s3", label: "S3" },
+    { path: "/logs", label: "CloudWatch" },
 ]
 
 function SunIcon() {
@@ -57,7 +58,9 @@ export default function Navbar({ theme, toggleTheme }) {
                     {/* Desktop nav links */}
                     <div className="hidden md:flex items-center gap-1">
                         {navItems.map((item) => {
-                            const active = location.pathname === item.path
+                            const active = item.path === "/"
+                                ? location.pathname === "/"
+                                : location.pathname.startsWith(item.path)
                             return (
                                 <Link
                                     key={item.path}
@@ -116,7 +119,9 @@ export default function Navbar({ theme, toggleTheme }) {
             {menuOpen && (
                 <div className="md:hidden border-t border-border/60 bg-background/95 backdrop-blur-md px-4 py-3 flex flex-col gap-1">
                     {navItems.map((item) => {
-                        const active = location.pathname === item.path
+                        const active = item.path === "/"
+                                ? location.pathname === "/"
+                                : location.pathname.startsWith(item.path)
                         return (
                             <Link
                                 key={item.path}

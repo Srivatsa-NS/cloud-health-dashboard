@@ -401,6 +401,143 @@ def get_s3_buckets():
     return jsonify(result)
 
 
+@app.route("/api/logs")
+def get_log_groups():
+    import time
+    from datetime import datetime
+
+    client = boto_client("logs")
+    now_ms = int(time.time() * 1000)
+    one_hour_ms = 60 * 60 * 1000
+
+    all_groups = []
+    try:
+        paginator = client.get_paginator("describe_log_groups")
+        for page in paginator.paginate():
+            all_groups.extend(page["logGroups"])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    result = []
+    for group in all_groups:
+        group_name = group["logGroupName"]
+        error_count = 0
+        warning_count = 0
+
+        try:
+            error_resp = client.filter_log_events(
+                logGroupName=group_name,
+                startTime=now_ms - one_hour_ms,
+                endTime=now_ms,
+                filterPattern='"ERROR"',
+                limit=100,
+            )
+            error_count = len(error_resp.get("events", []))
+        except Exception:
+            pass
+
+        try:
+            warn_resp = client.filter_log_events(
+                logGroupName=group_name,
+                startTime=now_ms - one_hour_ms,
+                endTime=now_ms,
+                filterPattern='"WARN"',
+                limit=100,
+            )
+            warning_count = len(warn_resp.get("events", []))
+        except Exception:
+            pass
+
+        if error_count > 5:
+            health = "critical"
+        elif error_count > 0 or warning_count > 0:
+            health = "warning"
+        else:
+            health = "healthy"
+
+        stored_bytes = group.get("storedBytes", 0)
+        if stored_bytes >= 1_073_741_824:
+            stored_str = f"{round(stored_bytes / 1_073_741_824, 1)} GB"
+        elif stored_bytes >= 1_048_576:
+            stored_str = f"{round(stored_bytes / 1_048_576, 1)} MB"
+        elif stored_bytes >= 1024:
+            stored_str = f"{round(stored_bytes / 1024, 1)} KB"
+        else:
+            stored_str = f"{stored_bytes} B"
+
+        result.append({
+            "name": group_name,
+            "stored_bytes": stored_bytes,
+            "stored_str": stored_str,
+            "retention_days": group.get("retentionInDays", "Never"),
+            "error_count": error_count,
+            "warning_count": warning_count,
+            "health": health,
+            "created": datetime.fromtimestamp(group["creationTime"] / 1000).strftime("%Y-%m-%d"),
+        })
+
+    return jsonify(result)
+
+
+@app.route("/api/logs/events")
+def get_log_events():
+    import time
+    from datetime import datetime
+
+    group_name = request.args.get("group")
+    if not group_name:
+        return jsonify({"error": "group parameter required"}), 400
+
+    hours = int(request.args.get("hours", 1))
+    client = boto_client("logs")
+    now_ms = int(time.time() * 1000)
+    window_ms = hours * 60 * 60 * 1000
+
+    try:
+        response = client.filter_log_events(
+            logGroupName=group_name,
+            startTime=now_ms - window_ms,
+            endTime=now_ms,
+            limit=500,
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    events = response.get("events", [])
+    error_count = 0
+    warning_count = 0
+    result = []
+
+    for event in sorted(events, key=lambda e: e["timestamp"], reverse=True):
+        message = event.get("message", "").strip()
+        upper = message.upper()
+        if any(kw in upper for kw in ("ERROR", "EXCEPTION", "FATAL", "CRITICAL")):
+            level = "ERROR"
+            error_count += 1
+        elif "WARN" in upper:
+            level = "WARN"
+            warning_count += 1
+        else:
+            level = "INFO"
+
+        result.append({
+            "timestamp": datetime.fromtimestamp(event["timestamp"] / 1000).strftime("%Y-%m-%d %H:%M:%S"),
+            "message": message,
+            "stream": event.get("logStreamName", ""),
+            "level": level,
+        })
+
+    return jsonify({
+        "group": group_name,
+        "events": result,
+        "total": len(result),
+        "error_count": error_count,
+        "warning_count": warning_count,
+        "info_count": len(result) - error_count - warning_count,
+        "hours": hours,
+    })
+
+
 @app.route("/api/insights", methods=["POST"])
 def get_insights():
     import json
@@ -415,6 +552,7 @@ def get_insights():
         "security": "Security Groups. Possible action_types: revoke_sg_rule, none. Include group_id, protocol, port, cidr in action_params",
         "s3": "S3 buckets. Possible action_types: ONLY use 'block_s3_public_access' for public buckets, or 'none'. Include bucket_name in action_params when using block_s3_public_access",
         "ecs": "ECS clusters and tasks. Possible action_types: none",
+        "cloudwatch": "CloudWatch log events from a specific log group. Focus on error patterns, recurring failures, and anomalies. Possible action_types: none",
     }
 
     service_description = service_prompts.get(service, "AWS infrastructure")
