@@ -23,14 +23,18 @@ export function AlertsProvider({ children }) {
 
             if (newAlerts.length > 0) {
                 // Add a toast for each new alert
-                const newToasts = newAlerts.map((a) => ({
-                    id: a.id,
-                    group: a.group,
-                    criticalCount: a.issues.filter((i) => i.severity === "critical").length,
-                    warningCount: a.issues.filter((i) => i.severity === "warning").length,
-                    infoCount: a.issues.filter((i) => i.severity === "info").length,
-                    timestamp: a.timestamp,
-                }))
+                const newToasts = newAlerts.map((a) => {
+                    const infoIssue = a.issues.find((i) => i.severity === "info")
+                    return {
+                        id: a.id,
+                        group: a.group,
+                        criticalCount: a.issues.filter((i) => i.severity === "critical").length,
+                        warningCount: a.issues.filter((i) => i.severity === "warning").length,
+                        infoCount: a.issues.filter((i) => i.severity === "info").length,
+                        infoMessage: infoIssue ? infoIssue.description : null,
+                        timestamp: a.timestamp,
+                    }
+                })
                 setToasts((prev) => [...prev, ...newToasts])
             }
 

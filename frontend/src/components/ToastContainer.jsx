@@ -41,13 +41,18 @@ function Toast({ toast }) {
                 <p className="text-sm font-semibold leading-tight">
                     Monitor Alert: {toast.group.split("/").pop()}
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                    {toast.criticalCount > 0 && <span className="text-red-500">{toast.criticalCount} critical </span>}
-                    {toast.warningCount > 0 && <span className="text-yellow-500">{toast.warningCount} warning </span>}
-                    {infoOnly
-                        ? <span className="text-blue-500">activity summary</span>
-                        : <>issue{(toast.criticalCount + toast.warningCount) !== 1 ? "s" : ""} detected</>}
-                </p>
+                {infoOnly && toast.infoMessage ? (
+                    <p className="text-xs text-blue-400 mt-0.5 line-clamp-2">{toast.infoMessage}</p>
+                ) : (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                        {toast.criticalCount > 0 && <span className="text-red-500">{toast.criticalCount} critical </span>}
+                        {toast.warningCount > 0 && <span className="text-yellow-500">{toast.warningCount} warning </span>}
+                        issue{(toast.criticalCount + toast.warningCount) !== 1 ? "s" : ""} detected
+                        {toast.infoMessage && (
+                            <span className="block text-blue-400 mt-0.5 line-clamp-2">{toast.infoMessage}</span>
+                        )}
+                    </p>
+                )}
             </div>
             <button
                 onClick={() => dismissToast(toast.id)}

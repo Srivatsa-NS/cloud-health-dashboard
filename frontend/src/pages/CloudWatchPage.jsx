@@ -23,6 +23,7 @@ function MonitorModal({ groupName, onClose, onSaved }) {
     const [customMinutes, setCustomMinutes] = useState("")
     const [saving, setSaving] = useState(false)
     const [running, setRunning] = useState(false)
+    const [deleting, setDeleting] = useState(false)
     const { fetchAlerts } = useAlerts()
 
     useEffect(() => {
@@ -77,6 +78,17 @@ function MonitorModal({ groupName, onClose, onSaved }) {
             }, 3500)
         } catch {
             setRunning(false)
+        }
+    }
+
+    const deleteMonitor = async () => {
+        setDeleting(true)
+        try {
+            await axios.delete("/api/monitor/config", { params: { group: groupName } })
+            onSaved(groupName, false)
+            onClose()
+        } catch {
+            setDeleting(false)
         }
     }
 
@@ -191,6 +203,17 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                             <Button variant="outline" onClick={runNow} disabled={running || cfg.running}>
                                 {running || cfg.running ? "Running..." : "Run Now"}
                             </Button>
+                        </div>
+
+                        {/* Danger zone */}
+                        <div className="pt-1 border-t border-border">
+                            <button
+                                onClick={deleteMonitor}
+                                disabled={deleting}
+                                className="text-xs text-red-500 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                                {deleting ? "Removing..." : "Remove monitor for this group"}
+                            </button>
                         </div>
                     </div>
                 )}

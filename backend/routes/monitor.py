@@ -126,8 +126,6 @@ def _make_job(group_name):
                 limit=500,
             )
             events = resp.get("events", [])
-            if not events:
-                return
 
             templates = {}
             for event in events:
@@ -148,23 +146,31 @@ def _make_job(group_name):
                 )[:limit]
                 payload.extend(bucket)
 
-            # Build 1 INFO summary item unconditionally so the pipeline
-            # (scheduler → email → toaster) is always testable.
-            info_bucket = sorted(
-                [v for v in templates.values() if v["level"] == "INFO"],
-                key=lambda x: x["count"], reverse=True,
-            )
-            if info_bucket:
-                top = info_bucket[0]
+            # Build 1 INFO summary item unconditionally — always fires so the
+            # full pipeline (scheduler → email → toaster) is testable.
+            if not events:
                 info_summary = (
-                    f"Top pattern: \"{top['template'][:80]}\" ({top['count']}×). "
-                    f"{len(events)} total events scanned in the last {interval_minutes} min."
+                    f"No log events found in the last {interval_minutes} min. "
+                    "The log group is quiet or has no recent activity."
                 )
             else:
-                info_summary = (
-                    f"{len(events)} total events scanned in the last {interval_minutes} min. "
-                    "No INFO-level patterns detected."
+                info_bucket = sorted(
+                    [v for v in templates.values() if v["level"] == "INFO"],
+                    key=lambda x: x["count"], reverse=True,
                 )
+                if info_bucket:
+                    top = info_bucket[0]
+                    info_summary = (
+                        f"{len(events)} events scanned in the last {interval_minutes} min. "
+                        f"Most frequent pattern ({top['count']}×): \"{top['template'][:80]}\""
+                    )
+                else:
+                    error_count = sum(1 for v in templates.values() if v["level"] == "ERROR")
+                    warn_count  = sum(1 for v in templates.values() if v["level"] == "WARN")
+                    info_summary = (
+                        f"{len(events)} events scanned in the last {interval_minutes} min "
+                        f"({error_count} error pattern(s), {warn_count} warning pattern(s))."
+                    )
             info_issue = {
                 "severity": "info",
                 "title": "Log activity summary",
@@ -174,7 +180,7 @@ def _make_job(group_name):
 
             # Run Bedrock analysis only when there are errors/warnings
             issues = []
-            if any(p["level"] in ("ERROR", "WARN") for p in payload):
+            if events and any(p["level"] in ("ERROR", "WARN") for p in payload):
                 prompt = f"""You are a cloud infrastructure expert monitoring AWS CloudWatch logs.
 The following log patterns were detected in log group "{group_name}" over the last {interval_minutes} minutes.
 {len(events)} total events collected, compressed into {len(templates)} unique templates.
@@ -330,6 +336,20 @@ def update_group_config():
 def get_alerts():
     with _lock:
         return jsonify(_alerts)
+
+
+@bp.route("/api/monitor/config", methods=["DELETE"])
+def delete_group_config():
+    group = request.args.get("group")
+    if not group:
+        return jsonify({"error": "group parameter required"}), 400
+    job_id = f"monitor-{group}"
+    if _scheduler.get_job(job_id):
+        _scheduler.remove_job(job_id)
+    with _lock:
+        _group_configs.pop(group, None)
+    _save_config()
+    return jsonify({"status": "deleted"})
 
 
 @bp.route("/api/monitor/alerts/read", methods=["POST"])
