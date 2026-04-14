@@ -60,7 +60,7 @@ Respond with a JSON array of insights. Each insight must have:
 - "description": what the issue is and why it matters
 - "action": what to do to fix it
 - "action_type": the appropriate action type from the list above
-- "action_params": parameters needed to execute the action
+- "action_params": parameters needed to execute the action — IMPORTANT: every value in action_params MUST be the exact real value taken directly from the data above. Do NOT use placeholders, examples, or template strings like "your-trusted-ip-address", "your-instance-id", or similar. If a required value is not present in the data, use action_type "none" instead.
 
 Only respond with the JSON array, no other text."""
 
@@ -77,4 +77,8 @@ Only respond with the JSON array, no other text."""
     insights = _parse_bedrock_json(raw)
 
     _cache[cache_key] = {"insights": insights, "cached_at": now}
+    # Invalidate any stale entries older than TTL (prune on write)
+    stale = [k for k, v in _cache.items() if (now - v["cached_at"]) >= _CACHE_TTL]
+    for k in stale:
+        del _cache[k]
     return jsonify(insights)
