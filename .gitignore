@@ -1,8 +1,13 @@
 # Python
 backend/venv/
 backend/__pycache__/
+backend/**/__pycache__/
 backend/*.pyc
+backend/**/*.pyc
 backend/.env
+
+# Runtime data (generated on first use, not part of source)
+backend/monitor_config.json
 
 # OS
 .DS_Store

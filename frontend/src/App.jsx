@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react"
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { InsightsProvider } from "@/context/InsightsContext"
+import { AlertsProvider } from "@/context/AlertsContext"
 import Navbar from "@/components/Navbar"
 import InsightsDrawer from "@/components/InsightsDrawer"
+import ToastContainer from "@/components/ToastContainer"
 import Dashboard from "@/pages/Dashboard"
 import EC2Page from "@/pages/EC2Page"
 import ECSPage from "@/pages/ECSPage"
@@ -30,22 +32,25 @@ export default function App() {
   return (
     <BrowserRouter>
       <InsightsProvider>
-        <div className="min-h-screen bg-background text-foreground">
-          <Navbar theme={theme} toggleTheme={toggleTheme} />
-          <InsightsDrawer />
-          <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/ec2" element={<EC2Page />} />
-              <Route path="/ecs" element={<ECSPage />} />
-              <Route path="/alarms" element={<AlarmsPage />} />
-              <Route path="/security" element={<SecurityPage />} />
-              <Route path="/s3" element={<S3Page />} />
-              <Route path="/logs" element={<CloudWatchPage />} />
-              <Route path="/logs/:groupName" element={<LogDetailPage />} />
-            </Routes>
-          </main>
-        </div>
+        <AlertsProvider>
+          <div className="min-h-screen bg-background text-foreground">
+            <Navbar theme={theme} toggleTheme={toggleTheme} />
+            <InsightsDrawer />
+            <ToastContainer />
+            <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/ec2" element={<EC2Page />} />
+                <Route path="/ecs" element={<ECSPage />} />
+                <Route path="/alarms" element={<AlarmsPage />} />
+                <Route path="/security" element={<SecurityPage />} />
+                <Route path="/s3" element={<S3Page />} />
+                <Route path="/logs" element={<CloudWatchPage />} />
+                <Route path="/logs/:groupName" element={<LogDetailPage />} />
+              </Routes>
+            </main>
+          </div>
+        </AlertsProvider>
       </InsightsProvider>
     </BrowserRouter>
   )
