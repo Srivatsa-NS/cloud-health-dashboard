@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction }
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import PageGrid from "@/components/PageGrid"
-import { useInsights } from "@/context/InsightsContext"
 import { useAlerts } from "@/context/AlertsContext"
 
 const INTERVAL_PRESETS = [
@@ -234,7 +233,6 @@ export default function CloudWatchPage() {
     const [refreshing, setRefreshing] = useState(false)
     const [modalGroup, setModalGroup] = useState(null)
     const [monitorActive, setMonitorActive] = useState({})
-    const { registerPage } = useInsights()
     const navigate = useNavigate()
 
     const fetchGroups = async () => {
@@ -262,7 +260,6 @@ export default function CloudWatchPage() {
     }
 
     useEffect(() => { fetchGroups() }, [])
-    useEffect(() => { registerPage("cloudwatch", groups, fetchGroups) }, [groups])
 
     const handleSaved = (groupName, enabled) => {
         setMonitorActive((prev) => ({ ...prev, [groupName]: enabled }))

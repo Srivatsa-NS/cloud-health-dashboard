@@ -2,7 +2,6 @@ import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import axios from "axios"
 import { Button } from "@/components/ui/button"
-import { useInsights } from "@/context/InsightsContext"
 
 const levelConfig = {
     ERROR:   { textClass: "text-red-500",    rowClass: "bg-red-500/10",    labelClass: "text-red-500 font-semibold" },
@@ -16,14 +15,12 @@ export default function LogDetailPage() {
     const { groupName: encoded } = useParams()
     const groupName = decodeURIComponent(encoded)
     const navigate = useNavigate()
-    const { registerPage } = useInsights()
 
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
     const [filter, setFilter] = useState("all")
     const [hours, setHours] = useState(1)
-
     const fetchEvents = async (h = hours) => {
         setRefreshing(true)
         try {
@@ -40,12 +37,6 @@ export default function LogDetailPage() {
     }
 
     useEffect(() => { fetchEvents() }, [groupName])
-
-    useEffect(() => {
-        if (data?.top_errors !== undefined) {
-            registerPage("cloudwatch", data.top_errors, () => fetchEvents())
-        }
-    }, [data])
 
     const handleHoursChange = (h) => {
         setHours(h)

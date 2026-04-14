@@ -1,25 +1,22 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import axios from "axios"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import PageGrid from "@/components/PageGrid"
-import FlipCard from "@/components/FlipCard"
-import { useInsights } from "@/context/InsightsContext"
 
 export default function S3Page() {
     const [buckets, setBuckets] = useState([])
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
-    const [refreshKey, setRefreshKey] = useState(0)
-    const { registerPage } = useInsights()
+    const navigate = useNavigate()
 
     const fetchBuckets = async () => {
         setRefreshing(true)
         try {
             const res = await axios.get("/api/s3")
             setBuckets(res.data)
-            setRefreshKey((k) => k + 1)
         } catch (err) {
             console.error(err)
         } finally {
@@ -29,7 +26,6 @@ export default function S3Page() {
     }
 
     useEffect(() => { fetchBuckets() }, [])
-    useEffect(() => { registerPage("s3", buckets, fetchBuckets) }, [buckets])
 
     if (loading) return <div className="text-muted-foreground p-8">Loading S3 buckets...</div>
 
@@ -55,50 +51,31 @@ export default function S3Page() {
                     <p className="text-muted-foreground col-span-3">No S3 buckets found.</p>
                 ) : (
                     buckets.map((bucket) => (
-                        <FlipCard
-                            key={`${bucket.name}-${refreshKey}`}
-                            front={
-                                <Card className="h-full cursor-pointer select-none flex flex-col">
-                                    <CardHeader>
-                                        <CardTitle>{bucket.name}</CardTitle>
-                                        <CardDescription>Created: {bucket.created}</CardDescription>
-                                        <CardAction>
-                                            <Badge variant={bucket.is_public ? "destructive" : "default"}>
-                                                {bucket.is_public ? "Public" : "Private"}
-                                            </Badge>
-                                        </CardAction>
-                                    </CardHeader>
-                                    <CardContent className="mt-auto">
-                                        <p className="text-muted-foreground text-xs">Click to see access details</p>
-                                    </CardContent>
-                                </Card>
-                            }
-                            back={
-                                <Card className="h-full cursor-pointer select-none flex flex-col overflow-hidden">
-                                    <CardHeader>
-                                        <CardTitle className="text-sm">{bucket.name}</CardTitle>
-                                        <CardDescription>Access Details</CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-2">
-                                        <div>
-                                            <p className="text-muted-foreground text-xs">Public Access</p>
-                                            <Badge variant={bucket.is_public ? "destructive" : "default"} className="mt-1">
-                                                {bucket.is_public ? "Public — anyone can access this bucket" : "Private — access restricted"}
-                                            </Badge>
-                                        </div>
-                                        <div>
-                                            <p className="text-muted-foreground text-xs">Created</p>
-                                            <p className="text-sm">{bucket.created}</p>
-                                        </div>
-                                        <p className="text-muted-foreground text-xs mt-auto pt-2 shrink-0">Click to go back</p>
-                                    </CardContent>
-                                </Card>
-                            }
-                        />
+                        <Card
+                            key={bucket.name}
+                            className="h-full flex flex-col cursor-pointer select-none hover:border-primary/50 hover:shadow-md transition-all duration-150"
+                            onClick={() => navigate(`/s3/${encodeURIComponent(bucket.name)}`)}
+                        >
+                            <CardHeader>
+                                <CardTitle className="truncate text-sm leading-snug">{bucket.name}</CardTitle>
+                                <CardDescription>Created: {bucket.created}</CardDescription>
+                                <CardAction>
+                                    <Badge variant={bucket.is_public ? "destructive" : "default"}>
+                                        {bucket.is_public ? "Public" : "Private"}
+                                    </Badge>
+                                </CardAction>
+                            </CardHeader>
+                            <CardContent className="mt-auto">
+                                <p className="text-muted-foreground text-xs">
+                                    {bucket.is_public
+                                        ? "Publicly accessible — click to view details and risks"
+                                        : "Private — click to view details"}
+                                </p>
+                            </CardContent>
+                        </Card>
                     ))
                 )}
             </PageGrid>
-
         </div>
     )
 }

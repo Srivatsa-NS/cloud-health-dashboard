@@ -1,25 +1,22 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import axios from "axios"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import PageGrid from "@/components/PageGrid"
-import FlipCard from "@/components/FlipCard"
-import { useInsights } from "@/context/InsightsContext"
 
 export default function ECSPage() {
     const [clusters, setClusters] = useState([])
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
-    const [refreshKey, setRefreshKey] = useState(0)
-    const { registerPage } = useInsights()
+    const navigate = useNavigate()
 
     const fetchClusters = async () => {
         setRefreshing(true)
         try {
             const res = await axios.get("/api/ecs")
             setClusters(res.data)
-            setRefreshKey((k) => k + 1)
         } catch (err) {
             console.error(err)
         } finally {
@@ -29,7 +26,6 @@ export default function ECSPage() {
     }
 
     useEffect(() => { fetchClusters() }, [])
-    useEffect(() => { registerPage("ecs", clusters, fetchClusters) }, [clusters])
 
     if (loading) return <div className="text-muted-foreground p-8">Loading ECS clusters...</div>
 
@@ -50,51 +46,30 @@ export default function ECSPage() {
                     <p className="text-muted-foreground col-span-3">No ECS clusters found.</p>
                 ) : (
                     clusters.map((cluster) => (
-                        <FlipCard
-                            key={`${cluster.cluster}-${refreshKey}`}
-                            front={
-                                <Card className="h-full cursor-pointer select-none flex flex-col">
-                                    <CardHeader>
-                                        <CardTitle>{cluster.cluster}</CardTitle>
-                                        <CardDescription>{cluster.task_arns.length} task(s) registered</CardDescription>
-                                        <CardAction>
-                                            <Badge variant={cluster.running_tasks > 0 ? "default" : "secondary"}>
-                                                {cluster.running_tasks > 0 ? "Active" : "Idle"}
-                                            </Badge>
-                                        </CardAction>
-                                    </CardHeader>
-                                    <CardContent className="flex flex-col gap-2 mt-auto">
-                                        <div>
-                                            <p className="text-muted-foreground text-xs mb-1">Running Tasks</p>
-                                            <p className="text-3xl font-bold">{cluster.running_tasks}</p>
-                                        </div>
-                                        <p className="text-muted-foreground text-xs">Click to see task ARNs</p>
-                                    </CardContent>
-                                </Card>
-                            }
-                            back={
-                                <Card className="h-full cursor-pointer select-none flex flex-col overflow-hidden">
-                                    <CardHeader>
-                                        <CardTitle className="text-sm">{cluster.cluster}</CardTitle>
-                                        <CardDescription>Task ARNs</CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-1">
-                                        {cluster.task_arns.length > 0 ? (
-                                            cluster.task_arns.map((arn) => (
-                                                <p key={arn} className="text-xs text-muted-foreground break-all">{arn.split("/").pop()}</p>
-                                            ))
-                                        ) : (
-                                            <p className="text-xs text-muted-foreground">No tasks running</p>
-                                        )}
-                                        <p className="text-muted-foreground text-xs mt-auto pt-2 shrink-0">Click to go back</p>
-                                    </CardContent>
-                                </Card>
-                            }
-                        />
+                        <Card
+                            key={cluster.cluster}
+                            className="h-full flex flex-col cursor-pointer select-none hover:border-primary/50 hover:shadow-md transition-all duration-150"
+                            onClick={() => navigate(`/ecs/${encodeURIComponent(cluster.cluster)}`)}
+                        >
+                            <CardHeader>
+                                <CardTitle className="truncate text-sm leading-snug">{cluster.cluster}</CardTitle>
+                                <CardDescription>{cluster.task_arns.length} task(s) registered</CardDescription>
+                                <CardAction>
+                                    <Badge variant={cluster.running_tasks > 0 ? "default" : "secondary"}>
+                                        {cluster.running_tasks > 0 ? "Active" : "Idle"}
+                                    </Badge>
+                                </CardAction>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-2 mt-auto">
+                                <div>
+                                    <p className="text-muted-foreground text-xs mb-1">Running Tasks</p>
+                                    <p className="text-3xl font-bold">{cluster.running_tasks}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
                     ))
                 )}
             </PageGrid>
-
         </div>
     )
 }
