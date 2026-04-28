@@ -292,20 +292,12 @@ def _send_email(to_email, alert):
                 f"  Recommended action: {issue.get('action', '')}",
                 "",
             ]
-    # Always include the INFO summary at the end
-    for issue in alert.get("issues", []):
-        if issue.get("severity") == "info":
-            lines += [
-                f"[INFO] {issue.get('title', '')}",
-                f"  {issue.get('description', '')}",
-                "",
-            ]
 
-    subject = (
-        f"CloudPulse 🚨 {group_name} — issues detected"
-        if has_issues
-        else f"CloudPulse ✅ {group_name} — monitoring check complete"
-    )
+    # If there are no critical/warning issues, don't send an email at all
+    if not has_issues:
+        return None
+
+    subject = f"CloudPulse 🚨 {group_name} — issues detected"
 
     try:
         ses.send_email(
