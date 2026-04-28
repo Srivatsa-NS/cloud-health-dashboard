@@ -65,6 +65,19 @@ function MonitorModal({ groupName, onClose, onSaved }) {
         }
     }
 
+    const resendVerification = async () => {
+        try {
+            const res = await axios.post("/api/monitor/config", {
+                group: groupName,
+                enabled: cfg.enabled,
+                interval_minutes: effectiveInterval,
+                email,
+                force_verify: true,
+            })
+            setCfg(res.data)
+        } catch { /* ignore */ }
+    }
+
     const runNow = async () => {
         setRunning(true)
         try {
@@ -186,6 +199,28 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                                 placeholder="you@example.com (optional)"
                                 className="text-xs px-3 py-1.5 rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                             />
+                            {/* Verification status — only shown when there's a saved email */}
+                            {cfg.email && email === cfg.email && (
+                                <div className="flex items-center justify-between">
+                                    {cfg.email_verified === "verified" && (
+                                        <span className="text-xs text-green-500">✓ Email verified</span>
+                                    )}
+                                    {cfg.email_verified === "pending" && (
+                                        <>
+                                            <span className="text-xs text-yellow-500">⏳ Verification pending — check your inbox</span>
+                                            <button
+                                                onClick={resendVerification}
+                                                className="text-xs text-primary underline cursor-pointer hover:opacity-80"
+                                            >
+                                                Resend
+                                            </button>
+                                        </>
+                                    )}
+                                    {(cfg.email_verified === "unverified" || cfg.email_verified === "unknown") && (
+                                        <span className="text-xs text-muted-foreground">Not verified — Save to send verification email</span>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Status */}

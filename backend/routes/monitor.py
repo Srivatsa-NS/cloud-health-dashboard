@@ -321,6 +321,33 @@ def _send_email(to_email, alert):
         return str(e)  # return error so caller can surface it
 
 
+def _get_email_verification_status(email):
+    """Returns 'verified', 'pending', or 'unverified'."""
+    if not email:
+        return "unverified"
+    try:
+        ses = boto_client("ses")
+        resp = ses.get_identity_verification_attributes(Identities=[email])
+        status = resp["VerificationAttributes"].get(email, {}).get("VerificationStatus", "")
+        if status == "Success":
+            return "verified"
+        elif status in ("Pending", "TemporaryFailure"):
+            return "pending"
+        return "unverified"
+    except Exception:
+        return "unknown"
+
+
+def _trigger_email_verification(email):
+    """Sends a SES verification email. Returns None on success, error string on failure."""
+    try:
+        ses = boto_client("ses")
+        ses.verify_email_identity(EmailAddress=email)
+        return None
+    except Exception as e:
+        return str(e)
+
+
 # ---------------------------------------------------------------------------
 # API routes
 # ---------------------------------------------------------------------------
@@ -331,11 +358,13 @@ def get_group_config():
     if not group:
         return jsonify({"error": "group parameter required"}), 400
     with _lock:
-        cfg = _group_configs.get(group) or {
+        cfg = dict(_group_configs.get(group) or {
             "enabled": False, "interval_minutes": 60, "email": "",
             "last_run": None, "next_run": None, "running": False, "last_error": None,
-        }
-        return jsonify(cfg)
+        })
+    # Check SES verification status outside the lock (network call)
+    cfg["email_verified"] = _get_email_verification_status(cfg.get("email", ""))
+    return jsonify(cfg)
 
 
 @bp.route("/api/monitor/config", methods=["POST"])
@@ -354,14 +383,27 @@ def update_group_config():
             cfg["enabled"] = bool(data["enabled"])
         if "interval_minutes" in data:
             cfg["interval_minutes"] = max(1, int(data["interval_minutes"]))
+        old_email = cfg.get("email", "")
+        new_email = str(data.get("email", old_email)).strip()
         if "email" in data:
-            cfg["email"] = str(data["email"]).strip()
+            cfg["email"] = new_email
         _group_configs[group] = cfg
 
     _reschedule_group(group)
     _save_config()
+
+    # If email was added, changed, or force_verify requested, trigger SES verification
+    verify_error = None
+    force_verify = bool(data.get("force_verify", False))
+    if new_email and (new_email != old_email or force_verify):
+        verify_error = _trigger_email_verification(new_email)
+
     with _lock:
-        return jsonify(_group_configs[group])
+        response = dict(_group_configs[group])
+    response["email_verified"] = _get_email_verification_status(new_email)
+    if verify_error:
+        response["verify_error"] = verify_error
+    return jsonify(response)
 
 
 @bp.route("/api/monitor/alerts", methods=["GET"])
