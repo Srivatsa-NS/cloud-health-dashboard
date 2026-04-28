@@ -130,7 +130,7 @@ export default function SecurityDetailPage() {
                 {!insightsLoading && insights.length > 0 && (
                     <div className="flex flex-col gap-3">
                         {insights.map((insight, i) => (
-                            <InsightCard key={i} insight={insight} onActionComplete={() => {}} />
+                            <InsightCard key={i} insight={insight} onActionComplete={() => {}} resourceData={sg} />
                         ))}
                     </div>
                 )}

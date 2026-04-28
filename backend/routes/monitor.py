@@ -227,7 +227,11 @@ Only critical and warning items. No info. No preamble."""
                 _alerts.insert(0, new_alert)
                 del _alerts[50:]
             if email:
-                _send_email(email, new_alert)
+                email_error = _send_email(email, new_alert)
+                if email_error:
+                    with _lock:
+                        if group_name in _group_configs:
+                            _group_configs[group_name]["last_error"] = f"Email failed: {email_error}"
 
         except Exception as e:
             with _lock:
@@ -263,30 +267,58 @@ def _reschedule_group(group_name):
 
 
 def _send_email(to_email, alert):
+    """Send alert email via SES. Returns None on success, error string on failure."""
     ses = boto_client("ses")
+    group_name = alert["group"]
+
+    # Build plain-text body
     lines = [
-        f"Log Group: {alert['group']}",
-        f"Window: last {alert['window_minutes']} minutes ({alert['raw_event_count']} events)",
+        f"CloudPulse Monitor Alert",
+        f"========================",
+        f"Log Group : {group_name}",
+        f"Window    : last {alert['window_minutes']} minutes",
+        f"Events    : {alert['raw_event_count']} total",
+        f"Time      : {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime(alert['timestamp']))}",
         "",
     ]
+    has_issues = False
     for issue in alert.get("issues", []):
-        lines += [
-            f"[{issue.get('severity','').upper()}] {issue.get('title','')}",
-            f"  {issue.get('description','')}",
-            f"  Action: {issue.get('action','')}",
-            "",
-        ]
+        severity = issue.get("severity", "").upper()
+        if severity in ("CRITICAL", "WARNING"):
+            has_issues = True
+            lines += [
+                f"[{severity}] {issue.get('title', '')}",
+                f"  What's happening: {issue.get('description', '')}",
+                f"  Recommended action: {issue.get('action', '')}",
+                "",
+            ]
+    # Always include the INFO summary at the end
+    for issue in alert.get("issues", []):
+        if issue.get("severity") == "info":
+            lines += [
+                f"[INFO] {issue.get('title', '')}",
+                f"  {issue.get('description', '')}",
+                "",
+            ]
+
+    subject = (
+        f"CloudPulse 🚨 {group_name} — issues detected"
+        if has_issues
+        else f"CloudPulse ✅ {group_name} — monitoring check complete"
+    )
+
     try:
         ses.send_email(
             Source=to_email,
             Destination={"ToAddresses": [to_email]},
             Message={
-                "Subject": {"Data": f"CloudPulse Alert — {alert['group']} needs attention"},
+                "Subject": {"Data": subject},
                 "Body": {"Text": {"Data": "\n".join(lines)}},
             },
         )
-    except Exception:
-        pass
+        return None  # success
+    except Exception as e:
+        return str(e)  # return error so caller can surface it
 
 
 # ---------------------------------------------------------------------------

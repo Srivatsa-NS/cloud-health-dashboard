@@ -144,7 +144,7 @@ export default function ECSDetailPage() {
                 {!insightsLoading && insights.length > 0 && (
                     <div className="flex flex-col gap-3">
                         {insights.map((insight, i) => (
-                            <InsightCard key={i} insight={insight} onActionComplete={() => {}} />
+                            <InsightCard key={i} insight={insight} onActionComplete={() => {}} resourceData={cluster} />
                         ))}
                     </div>
                 )}
