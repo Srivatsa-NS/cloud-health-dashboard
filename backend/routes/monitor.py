@@ -123,11 +123,20 @@ def _make_job(group_name):
 
             logs_client = boto_client("logs")
             now_ms = int(time.time() * 1000)
-            window_ms = interval_minutes * 60 * 1000
+
+            with _lock:
+                last_run = _group_configs[group_name].get("last_run")
+            # Use the actual last-run timestamp as the window start so no
+            # events are missed due to scheduler timing drift. Fall back to
+            # interval_minutes on the very first run.
+            if last_run:
+                start_ms = int(last_run * 1000)
+            else:
+                start_ms = now_ms - interval_minutes * 60 * 1000
 
             resp = logs_client.filter_log_events(
                 logGroupName=group_name,
-                startTime=now_ms - window_ms,
+                startTime=start_ms,
                 endTime=now_ms,
                 limit=500,
             )
@@ -220,11 +229,12 @@ Only critical and warning items. No info. No preamble."""
             # Always append the INFO summary so the full pipeline is exercised
             issues.append(info_issue)
 
+            window_minutes_actual = round((now_ms - start_ms) / 60_000, 1)
             new_alert = {
                 "id": f"{int(time.time())}-{group_name}",
                 "group": group_name,
                 "issues": issues,
-                "window_minutes": interval_minutes,
+                "window_minutes": window_minutes_actual,
                 "raw_event_count": len(events),
                 "timestamp": time.time(),
                 "read": False,
