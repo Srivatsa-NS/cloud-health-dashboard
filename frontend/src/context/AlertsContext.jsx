@@ -57,13 +57,14 @@ export function AlertsProvider({ children }) {
     }
 
     const acknowledgeAlert = async (id) => {
+        // Optimistic update — change UI immediately so the button responds instantly
+        setAlerts((prev) => prev.map((a) =>
+            a.id === id ? { ...a, acknowledged: true, read: true } : a
+        ))
+        setUnreadCount((prev) => Math.max(0, prev - 1))
         try {
             await axios.post("/api/monitor/alerts/acknowledge", { id })
-            setAlerts((prev) => prev.map((a) =>
-                a.id === id ? { ...a, acknowledged: true, read: true } : a
-            ))
-            setUnreadCount((prev) => Math.max(0, prev - 1))
-        } catch { /* ignore */ }
+        } catch { /* ignore — UI already updated */ }
     }
 
     // Initial fetch then poll
