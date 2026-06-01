@@ -279,6 +279,9 @@ def _reschedule_group(group_name):
             minutes=cfg["interval_minutes"],
             id=job_id,
             replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=cfg["interval_minutes"] * 60,
+            coalesce=True,
         )
         _group_configs[group_name]["next_run"] = time.time() + cfg["interval_minutes"] * 60
     else:
