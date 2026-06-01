@@ -150,15 +150,15 @@ function MonitorModal({ groupName, onClose, onSaved }) {
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
             onClick={onClose}
         >
             <div
-                className="bg-background border border-border rounded-xl shadow-xl w-full max-w-md p-6 m-4"
+                className="bg-background border border-border rounded-xl shadow-xl w-full max-w-md flex flex-col max-h-[90vh]"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-4">
+                {/* Header — fixed, never scrolls */}
+                <div className="flex items-start justify-between px-6 pt-6 pb-4 shrink-0">
                     <div>
                         <h2 className="font-semibold text-base">Log Monitor</h2>
                         <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-72">{groupName}</p>
@@ -172,9 +172,11 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                 </div>
 
                 {cfg === null ? (
-                    <p className="text-sm text-muted-foreground py-4 text-center">Loading...</p>
+                    <p className="text-sm text-muted-foreground py-4 text-center px-6 pb-6">Loading...</p>
                 ) : (
-                    <div className="flex flex-col gap-4">
+                    <>
+                    {/* Scrollable content area */}
+                    <div className="overflow-y-auto flex-1 px-6 flex flex-col gap-4">
                         {/* Enable toggle */}
                         <div className="flex items-center justify-between">
                             <span className="text-sm">Enable monitoring</span>
@@ -331,9 +333,12 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                             <div>Last run: <span className="text-foreground">{lastRun}</span></div>
                             {cfg.last_error && <div className="text-red-500">{cfg.last_error}</div>}
                         </div>
+                    </div>
 
+                    {/* Actions — pinned to bottom, never scrolls */}
+                    <div className="px-6 pt-3 pb-6 shrink-0 border-t border-border flex flex-col gap-3 mt-1">
                         {/* Actions */}
-                        <div className="flex items-center gap-2 pt-1">
+                        <div className="flex items-center gap-2">
                             <Button className="flex-1" onClick={() => save()} disabled={saving}>
                                 {saving ? "Saving..." : "Save"}
                             </Button>
@@ -343,7 +348,7 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                         </div>
 
                         {/* Danger zone */}
-                        <div className="pt-1 border-t border-border">
+                        <div className="">
                             <button
                                 onClick={deleteMonitor}
                                 disabled={deleting}
@@ -353,6 +358,7 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                             </button>
                         </div>
                     </div>
+                    </>
                 )}
             </div>
         </div>
