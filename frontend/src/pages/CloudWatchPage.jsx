@@ -21,6 +21,8 @@ function MonitorModal({ groupName, onClose, onSaved }) {
     const [intervalValue, setIntervalValue] = useState(60)
     const [isCustom, setIsCustom] = useState(false)
     const [customMinutes, setCustomMinutes] = useState("")
+    const [minSeverity, setMinSeverity] = useState("warning")
+    const [streamPrefix, setStreamPrefix] = useState("")
     const [saving, setSaving] = useState(false)
     const [running, setRunning] = useState(false)
     const [deleting, setDeleting] = useState(false)
@@ -28,6 +30,8 @@ function MonitorModal({ groupName, onClose, onSaved }) {
 
     const refreshCfg = (data) => {
         setCfg(data)
+        setMinSeverity(data.min_severity || "warning")
+        setStreamPrefix(data.stream_prefix || "")
         setEmails(data.emails || [])
         const preset = INTERVAL_PRESETS.find((p) => p.value === data.interval_minutes)
         if (preset) {
@@ -78,6 +82,8 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                 enabled: cfg.enabled,
                 interval_minutes: effectiveInterval,
                 emails,
+                min_severity: minSeverity,
+                stream_prefix: streamPrefix,
                 ...extra,
             })
             refreshCfg(res.data)
@@ -283,6 +289,41 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                                 </button>
                             </div>
                             <p className="text-xs text-muted-foreground">Press Enter or click Add. Each email requires AWS SES verification.</p>
+                        </div>
+
+                        {/* Min severity threshold */}
+                        <div className="flex flex-col gap-1.5">
+                            <span className="text-sm">Email me on</span>
+                            <div className="flex gap-2">
+                                {[
+                                    { value: "warning",  label: "Warning and above" },
+                                    { value: "critical", label: "Critical only" },
+                                ].map((opt) => (
+                                    <button
+                                        key={opt.value}
+                                        onClick={() => setMinSeverity(opt.value)}
+                                        className={`px-3 py-1.5 rounded-md text-xs border transition-colors cursor-pointer
+                                            ${minSeverity === opt.value
+                                                ? "bg-primary text-primary-foreground border-primary"
+                                                : "border-border text-muted-foreground hover:bg-muted"}`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Stream prefix filter */}
+                        <div className="flex flex-col gap-1.5">
+                            <span className="text-sm">Log stream filter <span className="text-muted-foreground font-normal">(optional)</span></span>
+                            <input
+                                type="text"
+                                value={streamPrefix}
+                                onChange={(e) => setStreamPrefix(e.target.value)}
+                                placeholder="e.g. prod/ or ecs/my-service"
+                                className="text-xs px-3 py-1.5 rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                            <p className="text-xs text-muted-foreground">Only scan streams whose name starts with this prefix. Leave blank to scan all streams.</p>
                         </div>
 
                         {/* Status */}

@@ -39,6 +39,9 @@ def _load_config():
                     cfg["emails"] = [old] if old else []
                 elif "emails" not in cfg:
                     cfg["emails"] = []
+                # Defaults for fields added in later versions
+                cfg.setdefault("min_severity", "warning")
+                cfg.setdefault("stream_prefix", "")
             _group_configs = data
     except Exception:
         pass
@@ -119,7 +122,9 @@ def _make_job(group_name):
         try:
             with _lock:
                 interval_minutes = _group_configs[group_name]["interval_minutes"]
-                emails = list(_group_configs[group_name].get("emails", []))
+                emails        = list(_group_configs[group_name].get("emails", []))
+                min_severity  = _group_configs[group_name].get("min_severity", "warning")
+                stream_prefix = _group_configs[group_name].get("stream_prefix", "").strip()
 
             logs_client = boto_client("logs")
             now_ms = int(time.time() * 1000)
@@ -134,12 +139,15 @@ def _make_job(group_name):
             else:
                 start_ms = now_ms - interval_minutes * 60 * 1000
 
-            resp = logs_client.filter_log_events(
+            filter_kwargs = dict(
                 logGroupName=group_name,
                 startTime=start_ms,
                 endTime=now_ms,
                 limit=500,
             )
+            if stream_prefix:
+                filter_kwargs["logStreamNamePrefix"] = stream_prefix
+            resp = logs_client.filter_log_events(**filter_kwargs)
             events = resp.get("events", [])
 
             templates = {}
@@ -238,6 +246,7 @@ Only critical and warning items. No info. No preamble."""
                 "raw_event_count": len(events),
                 "timestamp": time.time(),
                 "read": False,
+                "acknowledged": False,
             }
             with _lock:
                 _alerts.insert(0, new_alert)
@@ -245,7 +254,7 @@ Only critical and warning items. No info. No preamble."""
             if emails:
                 failures = []
                 for em in emails:
-                    err = _send_email(em, new_alert)
+                    err = _send_email(em, new_alert, min_severity)
                     if err:
                         failures.append(f"{em}: {err}")
                 if failures:
@@ -289,11 +298,14 @@ def _reschedule_group(group_name):
             cfg["next_run"] = None
 
 
-def _send_email(to_email, alert):
+def _send_email(to_email, alert, min_severity="warning"):
     """Send alert email via SES. Returns None on success, error string on failure."""
     ses = boto_client("ses")
     group_name = alert["group"]
     from_address = SENDER_EMAIL if SENDER_EMAIL else to_email
+
+    # Determine which severities qualify for an email
+    allowed = {"CRITICAL"} if min_severity == "critical" else {"CRITICAL", "WARNING"}
 
     # Build plain-text body
     lines = [
@@ -308,7 +320,7 @@ def _send_email(to_email, alert):
     has_issues = False
     for issue in alert.get("issues", []):
         severity = issue.get("severity", "").upper()
-        if severity in ("CRITICAL", "WARNING"):
+        if severity in allowed:
             has_issues = True
             lines += [
                 f"[{severity}] {issue.get('title', '')}",
@@ -317,7 +329,7 @@ def _send_email(to_email, alert):
                 "",
             ]
 
-    # If there are no critical/warning issues, don't send an email at all
+    # If nothing meets the threshold, don't send
     if not has_issues:
         return None
 
@@ -382,6 +394,7 @@ def get_group_config():
     with _lock:
         cfg = dict(_group_configs.get(group) or {
             "enabled": False, "interval_minutes": 60, "emails": [],
+            "min_severity": "warning", "stream_prefix": "",
             "last_run": None, "next_run": None, "running": False, "last_error": None,
         })
     # Check SES verification status outside the lock (network call)
@@ -405,6 +418,10 @@ def update_group_config():
             cfg["enabled"] = bool(data["enabled"])
         if "interval_minutes" in data:
             cfg["interval_minutes"] = max(1, int(data["interval_minutes"]))
+        if "min_severity" in data:
+            cfg["min_severity"] = "critical" if data["min_severity"] == "critical" else "warning"
+        if "stream_prefix" in data:
+            cfg["stream_prefix"] = str(data["stream_prefix"]).strip()
         old_emails = set(cfg.get("emails", []))
         if "emails" in data:
             cfg["emails"] = [str(e).strip() for e in data["emails"] if str(e).strip()]
@@ -454,6 +471,21 @@ def mark_read():
     return jsonify({"status": "ok"})
 
 
+@bp.route("/api/monitor/alerts/acknowledge", methods=["POST"])
+def acknowledge_alert():
+    data = request.get_json()
+    alert_id = data.get("id") if data else None
+    if not alert_id:
+        return jsonify({"error": "id required"}), 400
+    with _lock:
+        for alert in _alerts:
+            if alert["id"] == alert_id:
+                alert["acknowledged"] = True
+                alert["read"] = True
+                break
+    return jsonify({"status": "ok"})
+
+
 @bp.route("/api/monitor/run", methods=["POST"])
 def trigger_run():
     data = request.get_json()
@@ -465,6 +497,7 @@ def trigger_run():
         with _lock:
             _group_configs[group] = {
                 "enabled": False, "interval_minutes": 60, "emails": [],
+                "min_severity": "warning", "stream_prefix": "",
                 "last_run": None, "next_run": None, "running": False, "last_error": None,
             }
     t = threading.Thread(target=_make_job(group), daemon=True)

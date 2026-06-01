@@ -56,6 +56,16 @@ export function AlertsProvider({ children }) {
         } catch { /* ignore */ }
     }
 
+    const acknowledgeAlert = async (id) => {
+        try {
+            await axios.post("/api/monitor/alerts/acknowledge", { id })
+            setAlerts((prev) => prev.map((a) =>
+                a.id === id ? { ...a, acknowledged: true, read: true } : a
+            ))
+            setUnreadCount((prev) => Math.max(0, prev - 1))
+        } catch { /* ignore */ }
+    }
+
     // Initial fetch then poll
     useEffect(() => {
         fetchAlerts()
@@ -64,7 +74,7 @@ export function AlertsProvider({ children }) {
     }, [])
 
     return (
-        <AlertsContext.Provider value={{ alerts, unreadCount, toasts, dismissToast, markAllRead, fetchAlerts }}>
+        <AlertsContext.Provider value={{ alerts, unreadCount, toasts, dismissToast, markAllRead, acknowledgeAlert, fetchAlerts }}>
             {children}
         </AlertsContext.Provider>
     )
