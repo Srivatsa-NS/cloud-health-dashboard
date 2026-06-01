@@ -93,12 +93,24 @@ function MonitorModal({ groupName, onClose, onSaved }) {
         setRunning(true)
         try {
             await axios.post("/api/monitor/run", { group: groupName })
-            setTimeout(async () => {
-                const res = await axios.get("/api/monitor/config", { params: { group: groupName } })
-                setCfg(res.data)
-                await fetchAlerts()
-                setRunning(false)
-            }, 3500)
+            // Poll until the backend job finishes (cfg.running flips to false)
+            // or until 60 s have elapsed (safety timeout)
+            const deadline = Date.now() + 60_000
+            const poll = async () => {
+                try {
+                    const res = await axios.get("/api/monitor/config", { params: { group: groupName } })
+                    setCfg(res.data)
+                    if (res.data.running && Date.now() < deadline) {
+                        setTimeout(poll, 2000)
+                    } else {
+                        await fetchAlerts()
+                        setRunning(false)
+                    }
+                } catch {
+                    setRunning(false)
+                }
+            }
+            setTimeout(poll, 2000)
         } catch {
             setRunning(false)
         }
