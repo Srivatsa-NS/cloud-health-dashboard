@@ -26,25 +26,37 @@ function MonitorModal({ groupName, onClose, onSaved }) {
     const [deleting, setDeleting] = useState(false)
     const { fetchAlerts } = useAlerts()
 
+    const refreshCfg = (data) => {
+        setCfg(data)
+        setEmails(data.emails || [])
+        const preset = INTERVAL_PRESETS.find((p) => p.value === data.interval_minutes)
+        if (preset) {
+            setIntervalValue(data.interval_minutes)
+            setIsCustom(false)
+        } else {
+            setIsCustom(true)
+            setCustomMinutes(String(data.interval_minutes))
+        }
+    }
+
     useEffect(() => {
+        // Initial load
         axios.get("/api/monitor/config", { params: { group: groupName } })
-            .then((res) => {
-                const data = res.data
-                setCfg(data)
-                setEmails(data.emails || [])
-                const preset = INTERVAL_PRESETS.find((p) => p.value === data.interval_minutes)
-                if (preset) {
-                    setIntervalValue(data.interval_minutes)
-                    setIsCustom(false)
-                } else {
-                    setIsCustom(true)
-                    setCustomMinutes(String(data.interval_minutes))
-                }
-            })
+            .then((res) => refreshCfg(res.data))
             .catch(() => setCfg({
                 enabled: false, interval_minutes: 60, emails: [],
                 last_run: null, next_run: null, running: false, last_error: null,
             }))
+
+        // Poll every 10 s while the modal is open so last_run / last_error
+        // stay current when the background scheduler fires
+        const timer = setInterval(() => {
+            axios.get("/api/monitor/config", { params: { group: groupName } })
+                .then((res) => setCfg(res.data))
+                .catch(() => {})
+        }, 10_000)
+
+        return () => clearInterval(timer)
     }, [groupName])
 
     const effectiveInterval = isCustom ? (parseInt(customMinutes, 10) || 60) : intervalValue
@@ -68,8 +80,7 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                 emails,
                 ...extra,
             })
-            setCfg(res.data)
-            setEmails(res.data.emails || [])
+            refreshCfg(res.data)
             onSaved(groupName, res.data.enabled)
         } finally {
             setSaving(false)
