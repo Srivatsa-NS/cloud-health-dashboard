@@ -5,7 +5,7 @@ import threading
 from pathlib import Path
 from flask import Blueprint, jsonify, request
 from apscheduler.schedulers.background import BackgroundScheduler
-from config import boto_client
+from config import boto_client, SENDER_EMAIL
 
 bp = Blueprint("monitor", __name__)
 
@@ -290,6 +290,7 @@ def _send_email(to_email, alert):
     """Send alert email via SES. Returns None on success, error string on failure."""
     ses = boto_client("ses")
     group_name = alert["group"]
+    from_address = SENDER_EMAIL if SENDER_EMAIL else to_email
 
     # Build plain-text body
     lines = [
@@ -321,7 +322,7 @@ def _send_email(to_email, alert):
 
     try:
         ses.send_email(
-            Source=to_email,
+            Source=f"CloudPulse Alerts <{from_address}>",
             Destination={"ToAddresses": [to_email]},
             Message={
                 "Subject": {"Data": subject},
