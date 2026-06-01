@@ -16,7 +16,8 @@ const INTERVAL_PRESETS = [
 
 function MonitorModal({ groupName, onClose, onSaved }) {
     const [cfg, setCfg] = useState(null)
-    const [email, setEmail] = useState("")
+    const [emails, setEmails] = useState([])
+    const [emailInput, setEmailInput] = useState("")
     const [intervalValue, setIntervalValue] = useState(60)
     const [isCustom, setIsCustom] = useState(false)
     const [customMinutes, setCustomMinutes] = useState("")
@@ -30,7 +31,7 @@ function MonitorModal({ groupName, onClose, onSaved }) {
             .then((res) => {
                 const data = res.data
                 setCfg(data)
-                setEmail(data.email || "")
+                setEmails(data.emails || [])
                 const preset = INTERVAL_PRESETS.find((p) => p.value === data.interval_minutes)
                 if (preset) {
                     setIntervalValue(data.interval_minutes)
@@ -41,12 +42,21 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                 }
             })
             .catch(() => setCfg({
-                enabled: false, interval_minutes: 60, email: "",
+                enabled: false, interval_minutes: 60, emails: [],
                 last_run: null, next_run: null, running: false, last_error: null,
             }))
     }, [groupName])
 
     const effectiveInterval = isCustom ? (parseInt(customMinutes, 10) || 60) : intervalValue
+
+    const addEmail = () => {
+        const val = emailInput.trim()
+        if (!val || emails.includes(val)) return
+        setEmails((prev) => [...prev, val])
+        setEmailInput("")
+    }
+
+    const removeEmail = (em) => setEmails((prev) => prev.filter((e) => e !== em))
 
     const save = async (extra = {}) => {
         setSaving(true)
@@ -55,23 +65,24 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                 group: groupName,
                 enabled: cfg.enabled,
                 interval_minutes: effectiveInterval,
-                email,
+                emails,
                 ...extra,
             })
             setCfg(res.data)
+            setEmails(res.data.emails || [])
             onSaved(groupName, res.data.enabled)
         } finally {
             setSaving(false)
         }
     }
 
-    const resendVerification = async () => {
+    const resendVerification = async (em) => {
         try {
             const res = await axios.post("/api/monitor/config", {
                 group: groupName,
                 enabled: cfg.enabled,
                 interval_minutes: effectiveInterval,
-                email,
+                emails,
                 force_verify: true,
             })
             setCfg(res.data)
@@ -189,38 +200,66 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                             )}
                         </div>
 
-                        {/* Email */}
+                        {/* Emails */}
                         <div className="flex flex-col gap-1.5">
-                            <span className="text-sm">Alert email</span>
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="you@example.com (optional)"
-                                className="text-xs px-3 py-1.5 rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                            />
-                            {/* Verification status — only shown when there's a saved email */}
-                            {cfg.email && email === cfg.email && (
-                                <div className="flex items-center justify-between">
-                                    {cfg.email_verified === "verified" && (
-                                        <span className="text-xs text-green-500">✓ Email verified</span>
-                                    )}
-                                    {cfg.email_verified === "pending" && (
-                                        <>
-                                            <span className="text-xs text-yellow-500">⏳ Verification pending — check your inbox</span>
-                                            <button
-                                                onClick={resendVerification}
-                                                className="text-xs text-primary underline cursor-pointer hover:opacity-80"
-                                            >
-                                                Resend
-                                            </button>
-                                        </>
-                                    )}
-                                    {(cfg.email_verified === "unverified" || cfg.email_verified === "unknown") && (
-                                        <span className="text-xs text-muted-foreground">Not verified — Save to send verification email</span>
-                                    )}
+                            <span className="text-sm">Alert emails</span>
+
+                            {/* Existing email chips */}
+                            {emails.length > 0 && (
+                                <div className="flex flex-col gap-1.5">
+                                    {emails.map((em) => {
+                                        const status = cfg?.email_statuses?.[em]
+                                        return (
+                                            <div key={em} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-md border border-border bg-muted/30 text-xs">
+                                                <span className="truncate flex-1 text-foreground">{em}</span>
+                                                <span className={
+                                                    status === "verified" ? "text-green-500 shrink-0" :
+                                                    status === "pending"  ? "text-yellow-500 shrink-0" :
+                                                    "text-muted-foreground shrink-0"
+                                                }>
+                                                    {status === "verified" ? "✓ Verified" :
+                                                     status === "pending"  ? "⏳ Pending" :
+                                                     "Not verified"}
+                                                </span>
+                                                {status === "pending" && (
+                                                    <button
+                                                        onClick={() => resendVerification(em)}
+                                                        className="text-primary underline cursor-pointer hover:opacity-80 shrink-0"
+                                                    >
+                                                        Resend
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => removeEmail(em)}
+                                                    className="text-muted-foreground hover:text-red-500 transition-colors cursor-pointer shrink-0 ml-1"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        )
+                                    })}
                                 </div>
                             )}
+
+                            {/* Add new email */}
+                            <div className="flex gap-2">
+                                <input
+                                    type="email"
+                                    value={emailInput}
+                                    onChange={(e) => setEmailInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addEmail())}
+                                    placeholder="Add email address..."
+                                    className="flex-1 text-xs px-3 py-1.5 rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                                />
+                                <button
+                                    onClick={addEmail}
+                                    disabled={!emailInput.trim()}
+                                    className="px-3 py-1.5 rounded-md text-xs border border-border text-muted-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    Add
+                                </button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">Press Enter or click Add. Each email requires AWS SES verification.</p>
                         </div>
 
                         {/* Status */}

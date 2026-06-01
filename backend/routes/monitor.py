@@ -33,6 +33,12 @@ def _load_config():
                 data = json.load(f)
             for cfg in data.values():
                 cfg["running"] = False   # reset runtime field
+                # Migrate old single-email field to list
+                if "email" in cfg and "emails" not in cfg:
+                    old = cfg.pop("email")
+                    cfg["emails"] = [old] if old else []
+                elif "emails" not in cfg:
+                    cfg["emails"] = []
             _group_configs = data
     except Exception:
         pass
@@ -113,7 +119,7 @@ def _make_job(group_name):
         try:
             with _lock:
                 interval_minutes = _group_configs[group_name]["interval_minutes"]
-                email = _group_configs[group_name].get("email", "")
+                emails = list(_group_configs[group_name].get("emails", []))
 
             logs_client = boto_client("logs")
             now_ms = int(time.time() * 1000)
@@ -226,12 +232,16 @@ Only critical and warning items. No info. No preamble."""
             with _lock:
                 _alerts.insert(0, new_alert)
                 del _alerts[50:]
-            if email:
-                email_error = _send_email(email, new_alert)
-                if email_error:
+            if emails:
+                failures = []
+                for em in emails:
+                    err = _send_email(em, new_alert)
+                    if err:
+                        failures.append(f"{em}: {err}")
+                if failures:
                     with _lock:
                         if group_name in _group_configs:
-                            _group_configs[group_name]["last_error"] = f"Email failed: {email_error}"
+                            _group_configs[group_name]["last_error"] = "Email failed: " + "; ".join(failures)
 
         except Exception as e:
             with _lock:
@@ -313,31 +323,37 @@ def _send_email(to_email, alert):
         return str(e)  # return error so caller can surface it
 
 
-def _get_email_verification_status(email):
-    """Returns 'verified', 'pending', or 'unverified'."""
-    if not email:
-        return "unverified"
+def _get_email_verification_statuses(emails):
+    """Returns {email: 'verified'|'pending'|'unverified'} for each email."""
+    if not emails:
+        return {}
     try:
         ses = boto_client("ses")
-        resp = ses.get_identity_verification_attributes(Identities=[email])
-        status = resp["VerificationAttributes"].get(email, {}).get("VerificationStatus", "")
-        if status == "Success":
-            return "verified"
-        elif status in ("Pending", "TemporaryFailure"):
-            return "pending"
-        return "unverified"
+        resp = ses.get_identity_verification_attributes(Identities=emails)
+        result = {}
+        for em in emails:
+            status = resp["VerificationAttributes"].get(em, {}).get("VerificationStatus", "")
+            if status == "Success":
+                result[em] = "verified"
+            elif status in ("Pending", "TemporaryFailure"):
+                result[em] = "pending"
+            else:
+                result[em] = "unverified"
+        return result
     except Exception:
-        return "unknown"
+        return {em: "unknown" for em in emails}
 
 
-def _trigger_email_verification(email):
-    """Sends a SES verification email. Returns None on success, error string on failure."""
-    try:
-        ses = boto_client("ses")
-        ses.verify_email_identity(EmailAddress=email)
-        return None
-    except Exception as e:
-        return str(e)
+def _trigger_email_verifications(emails):
+    """Triggers SES verification for each email. Returns list of (email, error) for failures."""
+    ses = boto_client("ses")
+    failures = []
+    for em in emails:
+        try:
+            ses.verify_email_identity(EmailAddress=em)
+        except Exception as e:
+            failures.append((em, str(e)))
+    return failures
 
 
 # ---------------------------------------------------------------------------
@@ -351,11 +367,11 @@ def get_group_config():
         return jsonify({"error": "group parameter required"}), 400
     with _lock:
         cfg = dict(_group_configs.get(group) or {
-            "enabled": False, "interval_minutes": 60, "email": "",
+            "enabled": False, "interval_minutes": 60, "emails": [],
             "last_run": None, "next_run": None, "running": False, "last_error": None,
         })
     # Check SES verification status outside the lock (network call)
-    cfg["email_verified"] = _get_email_verification_status(cfg.get("email", ""))
+    cfg["email_statuses"] = _get_email_verification_statuses(cfg.get("emails", []))
     return jsonify(cfg)
 
 
@@ -368,33 +384,31 @@ def update_group_config():
 
     with _lock:
         cfg = _group_configs.get(group) or {
-            "enabled": False, "interval_minutes": 60, "email": "",
+            "enabled": False, "interval_minutes": 60, "emails": [],
             "last_run": None, "next_run": None, "running": False, "last_error": None,
         }
         if "enabled" in data:
             cfg["enabled"] = bool(data["enabled"])
         if "interval_minutes" in data:
             cfg["interval_minutes"] = max(1, int(data["interval_minutes"]))
-        old_email = cfg.get("email", "")
-        new_email = str(data.get("email", old_email)).strip()
-        if "email" in data:
-            cfg["email"] = new_email
+        old_emails = set(cfg.get("emails", []))
+        if "emails" in data:
+            cfg["emails"] = [str(e).strip() for e in data["emails"] if str(e).strip()]
         _group_configs[group] = cfg
+        new_emails = list(cfg["emails"])
 
     _reschedule_group(group)
     _save_config()
 
-    # If email was added, changed, or force_verify requested, trigger SES verification
-    verify_error = None
+    # Trigger verification for any newly added emails
     force_verify = bool(data.get("force_verify", False))
-    if new_email and (new_email != old_email or force_verify):
-        verify_error = _trigger_email_verification(new_email)
+    added = [em for em in new_emails if em not in old_emails] if not force_verify else new_emails
+    if added:
+        _trigger_email_verifications(added)
 
     with _lock:
         response = dict(_group_configs[group])
-    response["email_verified"] = _get_email_verification_status(new_email)
-    if verify_error:
-        response["verify_error"] = verify_error
+    response["email_statuses"] = _get_email_verification_statuses(new_emails)
     return jsonify(response)
 
 
@@ -436,7 +450,7 @@ def trigger_run():
         # Allow running even without saved config — use defaults
         with _lock:
             _group_configs[group] = {
-                "enabled": False, "interval_minutes": 60, "email": "",
+                "enabled": False, "interval_minutes": 60, "emails": [],
                 "last_run": None, "next_run": None, "running": False, "last_error": None,
             }
     t = threading.Thread(target=_make_job(group), daemon=True)
