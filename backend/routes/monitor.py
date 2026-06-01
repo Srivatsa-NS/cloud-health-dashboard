@@ -185,7 +185,7 @@ def _make_job(group_name):
                     top = info_bucket[0]
                     info_summary = (
                         f"{len(events)} events scanned in the last {interval_minutes} min. "
-                        f"Most frequent pattern ({top['count']}×): \"{top['template'][:80]}\""
+                        f"Most frequent pattern ({top['count']}×): \"{top['sample'][:120]}\""
                     )
                 else:
                     error_count = sum(1 for v in templates.values() if v["level"] == "ERROR")
