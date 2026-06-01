@@ -25,7 +25,6 @@ function MonitorModal({ groupName, onClose, onSaved }) {
     const [streamPrefix, setStreamPrefix] = useState("")
     const [saving, setSaving] = useState(false)
     const [running, setRunning] = useState(false)
-    const [deleting, setDeleting] = useState(false)
     const { fetchAlerts } = useAlerts()
 
     const refreshCfg = (data) => {
@@ -133,17 +132,6 @@ function MonitorModal({ groupName, onClose, onSaved }) {
         }
     }
 
-    const deleteMonitor = async () => {
-        setDeleting(true)
-        try {
-            await axios.delete("/api/monitor/config", { params: { group: groupName } })
-            onSaved(groupName, false)
-            onClose()
-        } catch {
-            setDeleting(false)
-        }
-    }
-
     const lastRun = cfg?.last_run
         ? new Date(cfg.last_run * 1000).toLocaleTimeString()
         : "Never"
@@ -175,8 +163,8 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                     <p className="text-sm text-muted-foreground py-4 text-center px-6 pb-6">Loading...</p>
                 ) : (
                     <>
-                    {/* Scrollable content area */}
-                    <div className="overflow-y-auto flex-1 px-6 flex flex-col gap-4">
+                    {/* Scrollable content area — scrollbar hidden */}
+                    <div className="overflow-y-auto flex-1 px-6 flex flex-col gap-4 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
                         {/* Enable toggle */}
                         <div className="flex items-center justify-between">
                             <span className="text-sm">Enable monitoring</span>
@@ -336,8 +324,7 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                     </div>
 
                     {/* Actions — pinned to bottom, never scrolls */}
-                    <div className="px-6 pt-3 pb-6 shrink-0 border-t border-border flex flex-col gap-3 mt-1">
-                        {/* Actions */}
+                    <div className="px-6 pt-3 pb-6 shrink-0 border-t border-border">
                         <div className="flex items-center gap-2">
                             <Button className="flex-1" onClick={() => save()} disabled={saving}>
                                 {saving ? "Saving..." : "Save"}
@@ -345,17 +332,6 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                             <Button variant="outline" onClick={runNow} disabled={running || cfg.running}>
                                 {running || cfg.running ? "Running..." : "Run Now"}
                             </Button>
-                        </div>
-
-                        {/* Danger zone */}
-                        <div className="">
-                            <button
-                                onClick={deleteMonitor}
-                                disabled={deleting}
-                                className="text-xs text-red-500 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50"
-                            >
-                                {deleting ? "Removing..." : "Remove monitor for this group"}
-                            </button>
                         </div>
                     </div>
                     </>
