@@ -15,6 +15,7 @@ import S3Page from "@/pages/S3Page"
 import S3DetailPage from "@/pages/S3DetailPage"
 import CloudWatchPage from "@/pages/CloudWatchPage"
 import LogDetailPage from "@/pages/LogDetailPage"
+import NotificationsPage from "@/pages/NotificationsPage"
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light")
@@ -51,6 +52,7 @@ export default function App() {
               <Route path="/s3/:bucketName" element={<S3DetailPage />} />
               <Route path="/logs" element={<CloudWatchPage />} />
               <Route path="/logs/:groupName" element={<LogDetailPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
             </Routes>
           </main>
         </div>
