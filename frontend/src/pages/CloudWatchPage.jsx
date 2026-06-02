@@ -29,7 +29,6 @@ function MonitorModal({ groupName, onClose, onSaved }) {
     const refreshCfg = (data) => {
         setCfg(data)
         setMinSeverity(data.min_severity || "warning")
-        setStreamPrefix(data.stream_prefix || "")
         setEmails(data.emails || [])
         const preset = INTERVAL_PRESETS.find((p) => p.value === data.interval_minutes)
         if (preset) {
