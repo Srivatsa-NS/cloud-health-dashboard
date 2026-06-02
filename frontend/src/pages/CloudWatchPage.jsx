@@ -22,7 +22,6 @@ function MonitorModal({ groupName, onClose, onSaved }) {
     const [isCustom, setIsCustom] = useState(false)
     const [customMinutes, setCustomMinutes] = useState("")
     const [minSeverity, setMinSeverity] = useState("warning")
-    const [streamPrefix, setStreamPrefix] = useState("")
     const [saving, setSaving] = useState(false)
     const [running, setRunning] = useState(false)
     const { fetchAlerts } = useAlerts()
@@ -82,7 +81,6 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                 interval_minutes: effectiveInterval,
                 emails,
                 min_severity: minSeverity,
-                stream_prefix: streamPrefix,
                 ...extra,
             })
             refreshCfg(res.data)
@@ -301,19 +299,6 @@ function MonitorModal({ groupName, onClose, onSaved }) {
                                     </button>
                                 ))}
                             </div>
-                        </div>
-
-                        {/* Stream prefix filter */}
-                        <div className="flex flex-col gap-1.5">
-                            <span className="text-sm">Log stream filter <span className="text-muted-foreground font-normal">(optional)</span></span>
-                            <input
-                                type="text"
-                                value={streamPrefix}
-                                onChange={(e) => setStreamPrefix(e.target.value)}
-                                placeholder="e.g. prod/ or ecs/my-service"
-                                className="text-xs px-3 py-1.5 rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                            />
-                            <p className="text-xs text-muted-foreground">Only scan streams whose name starts with this prefix. Leave blank to scan all streams.</p>
                         </div>
 
                         {/* Status */}

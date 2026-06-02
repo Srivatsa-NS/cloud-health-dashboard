@@ -41,7 +41,6 @@ def _load_config():
                     cfg["emails"] = []
                 # Defaults for fields added in later versions
                 cfg.setdefault("min_severity", "warning")
-                cfg.setdefault("stream_prefix", "")
             _group_configs = data
     except Exception:
         pass
@@ -124,30 +123,23 @@ def _make_job(group_name):
                 interval_minutes = _group_configs[group_name]["interval_minutes"]
                 emails        = list(_group_configs[group_name].get("emails", []))
                 min_severity  = _group_configs[group_name].get("min_severity", "warning")
-                stream_prefix = _group_configs[group_name].get("stream_prefix", "").strip()
 
             logs_client = boto_client("logs")
             now_ms = int(time.time() * 1000)
 
             with _lock:
                 last_run = _group_configs[group_name].get("last_run")
-            # Use the actual last-run timestamp as the window start so no
-            # events are missed due to scheduler timing drift. Fall back to
-            # interval_minutes on the very first run.
             if last_run:
                 start_ms = int(last_run * 1000)
             else:
                 start_ms = now_ms - interval_minutes * 60 * 1000
 
-            filter_kwargs = dict(
+            resp = logs_client.filter_log_events(
                 logGroupName=group_name,
                 startTime=start_ms,
                 endTime=now_ms,
                 limit=500,
             )
-            if stream_prefix:
-                filter_kwargs["logStreamNamePrefix"] = stream_prefix
-            resp = logs_client.filter_log_events(**filter_kwargs)
             events = resp.get("events", [])
 
             templates = {}
@@ -394,7 +386,7 @@ def get_group_config():
     with _lock:
         cfg = dict(_group_configs.get(group) or {
             "enabled": False, "interval_minutes": 60, "emails": [],
-            "min_severity": "warning", "stream_prefix": "",
+            "min_severity": "warning",
             "last_run": None, "next_run": None, "running": False, "last_error": None,
         })
     # Check SES verification status outside the lock (network call)
@@ -420,8 +412,6 @@ def update_group_config():
             cfg["interval_minutes"] = max(1, int(data["interval_minutes"]))
         if "min_severity" in data:
             cfg["min_severity"] = "critical" if data["min_severity"] == "critical" else "warning"
-        if "stream_prefix" in data:
-            cfg["stream_prefix"] = str(data["stream_prefix"]).strip()
         old_emails = set(cfg.get("emails", []))
         if "emails" in data:
             cfg["emails"] = [str(e).strip() for e in data["emails"] if str(e).strip()]
@@ -497,7 +487,7 @@ def trigger_run():
         with _lock:
             _group_configs[group] = {
                 "enabled": False, "interval_minutes": 60, "emails": [],
-                "min_severity": "warning", "stream_prefix": "",
+                "min_severity": "warning",
                 "last_run": None, "next_run": None, "running": False, "last_error": None,
             }
     t = threading.Thread(target=_make_job(group), daemon=True)
